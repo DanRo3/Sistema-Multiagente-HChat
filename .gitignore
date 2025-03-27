@@ -1,0 +1,15 @@
+# Entorno virtual
+venv/
+# Archivos de Python compilados
+__pycache__/
+*.pyc
+# Archivos de configuración local
+.env
+# Bases de datos / Índices
+vector_store_index/
+# Artefactos de IDE
+.vscode/
+.idea/
+# Otros
+*.log
+*.tmp

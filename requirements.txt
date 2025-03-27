@@ -1,0 +1,27 @@
+fastapi
+uvicorn[standard] # Servidor ASGI para FastAPI
+pydantic
+pydantic-settings # Para cargar config desde .env
+python-dotenv   # Necesario para pydantic-settings .env loading
+
+# LangChain y Langraph
+langchain
+langgraph
+langchain-google-genai # Para Gemini
+langchain-core 
+langchain-community
+unidecode
+
+# Embeddings y Vector Store
+sentence-transformers # Para el modelo de Hugging Face
+faiss-cpu           # O faiss-gpu si tienes GPU y CUDA configurados
+torch               # O tensorflow, dependiendo de sentence-transformers
+
+# Para generación/ejecución de código y visualización
+pandas
+matplotlib
+seaborn
+
+# Opcional para pruebas
+pytest
+httpx # Para probar clientes FastAPI
