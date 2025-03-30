@@ -34,7 +34,7 @@ El sistema sigue una arquitectura de microservicio basada en FastAPI, con un flu
 6. **Validación (Validation Agent):** Revisa la coherencia y relevancia de la respuesta generada (texto o imagen) respecto a la consulta original.
 7. **Entrega (Moderator Agent / FastAPI):** Ensambla la respuesta final y la devuelve al usuario en formato JSON, conteniendo texto y/o una imagen codificada en base64.
 
-```console
+```bash
 graph LR
     A[Usuario] -- Consulta (NL) --> B(FastAPI Endpoint /api/query);
     B -- Query --> C{Moderator Agent (Proxy)};
@@ -54,7 +54,7 @@ graph LR
     B -- JSON Response --> A;
 ```
 
-🛠️ Tecnologías Utilizadas
+## 🛠️ Tecnologías Utilizadas
 
 Backend: FastAPI
 
@@ -73,7 +73,7 @@ Librerías Clave: langchain, langgraph, fastapi, uvicorn, faiss-cpu (o faiss-gpu
 Contenerización (Opcional): Docker
 
 
-```console
+```bash
 
 📂 Estructura del Proyecto
 /tesis-multiagente-bi/
@@ -97,7 +97,7 @@ Contenerización (Opcional): Docker
 
 ```
 
-🚀 Cómo Empezar
+## 🚀 Cómo Empezar
 Prerrequisitos
 
 Python 3.9+
@@ -106,61 +106,49 @@ pip (gestor de paquetes de Python)
 
 Git
 
-```
-1. Clonar el Repositorio
+
+1.Clonar el Repositorio
+
+```bash
 git clone < url-del-repositorio >
+
 cd tesis-multiagente-bi
-IGNORE_WHEN_COPYING_START
-content_copy
-download
-Use code with caution.
-Bash
-IGNORE_WHEN_COPYING_END
-2. Crear Entorno Virtual (Recomendado)
+```
+
+2.Crear Entorno Virtual (Recomendado)
+
+```bash
 python -m venv venv
-source venv/bin/activate  # En Windows: venv\Scripts\activate
-IGNORE_WHEN_COPYING_START
-content_copy
-download
-Use code with caution.
-Bash
-IGNORE_WHEN_COPYING_END
-3. Instalar Dependencias
+
+source venv/bin/activate  # En Windows:
+
+venv\Scripts\activate
+```
+
+3.Instalar Dependencias
+
+```bash
 pip install -r requirements.txt
-IGNORE_WHEN_COPYING_START
-content_copy
-download
-Use code with caution.
-Bash
-IGNORE_WHEN_COPYING_END
-4. Configurar Variables de Entorno
+```
+
+4.Configurar Variables de Entorno
 
 Copia el archivo de ejemplo y edítalo con tus credenciales:
 
+```bash
 cp .env.example .env
-IGNORE_WHEN_COPYING_START
-content_copy
-download
-Use code with caution.
-Bash
-IGNORE_WHEN_COPYING_END
+
+```
 
 Abre el archivo .env y añade tu clave API de Google Gemini:
 
+```bash
 # .env
 GEMINI_API_KEY="TU_API_KEY_DE_GOOGLE_GEMINI"
 # Otras configuraciones si las hubiera (normalmente se definen en app/core/config.py)
-IGNORE_WHEN_COPYING_START
-content_copy
-download
-Use code with caution.
-Dotenv
-IGNORE_WHEN_COPYING_END
-
-
-5. Construir la Base de Datos Vectorial FAISS
 ```
 
+5.Construir la Base de Datos Vectorial FAISS
 
 Asegúrate de tener tus datos fuente (e.g., datos.csv) en la carpeta data/.
 
@@ -171,13 +159,10 @@ Este proceso leerá el CSV, generará embeddings usando sentence-transformers/al
 MUY IMPORTANTE: Copia los archivos .faiss y .pkl generados a la carpeta vector_store_index/ en la raíz del proyecto.
 
 6.Ejecutar la Aplicación FastAPI
+
+```bash
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-IGNORE_WHEN_COPYING_START
-content_copy
-download
-Use code with caution.
-Bash
-IGNORE_WHEN_COPYING_END
+```
 
 --reload: Reinicia el servidor automáticamente al detectar cambios en el código (útil para desarrollo).
 
@@ -187,7 +172,7 @@ IGNORE_WHEN_COPYING_END
 
 La API estará disponible en http://localhost:8000. Puedes ver la documentación interactiva (Swagger UI) en http://localhost:8000/docs.
 
-⚙️ Uso (API)
+## ⚙️ Uso (API)
 
 Puedes interactuar con el sistema enviando peticiones POST al endpoint /api/query.
 
@@ -195,110 +180,79 @@ Endpoint: POST /api/query
 
 Request Body (JSON):
 
+```json
 {
   "query": "Muéstrame un gráfico de barras con la duración promedio de los viajes por tipo de barco."
 }
-IGNORE_WHEN_COPYING_START
-content_copy
-download
-Use code with caution.
-Json
-IGNORE_WHEN_COPYING_END
+```
 
 o
-
+```json
 {
   "query": "¿Cuál es el rol del capitán John Doe?"
 }
-IGNORE_WHEN_COPYING_START
-content_copy
-download
-Use code with caution.
-Json
-IGNORE_WHEN_COPYING_END
+```
 
 Ejemplo con curl:
 
+```bash
 curl -X POST "http://localhost:8000/api/query" \
      -H "Content-Type: application/json" \
      -d '{"query": "Genera una gráfica de los puertos de salida más comunes"}'
-IGNORE_WHEN_COPYING_START
-content_copy
-download
-Use code with caution.
-Bash
-IGNORE_WHEN_COPYING_END
+
+```
+
 
 Response Body (JSON):
-
 La respuesta contendrá un campo text_response y/o image_response (imagen codificada en base64), dependiendo de la consulta y la intención detectada.
 
 Respuesta Textual:
-
+```json
 {
   "text_response": "El rol del capitán John Doe es supervisar la navegación y seguridad del buque.",
   "image_response": null,
   "error": null
 }
-IGNORE_WHEN_COPYING_START
-content_copy
-download
-Use code with caution.
-Json
-IGNORE_WHEN_COPYING_END
+```
 
 Respuesta Visual:
-
+```json
 {
   "text_response": "Aquí tienes una gráfica mostrando los puertos de salida más comunes.",
   "image_response": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAoAAAAHgCAY...", // String largo en base64
   "error": null
 }
-IGNORE_WHEN_COPYING_START
-content_copy
-download
-Use code with caution.
-Json
-IGNORE_WHEN_COPYING_END
-
+```
 Error:
-
+```json
 {
   "text_response": null,
   "image_response": null,
   "error": "Lo siento, ocurrió un error al procesar tu solicitud: [Detalle del error]"
 }
-IGNORE_WHEN_COPYING_START
-content_copy
-download
-Use code with caution.
-Json
-IGNORE_WHEN_COPYING_END
-✅ Pruebas
+```
+
+## ✅ Pruebas
 
 Para verificar rápidamente la carga y búsqueda en el índice FAISS (antes de ejecutar toda la aplicación), puedes usar el script de prueba:
 
+```bash
 python test_faiss_query.py
-IGNORE_WHEN_COPYING_START
-content_copy
-download
-Use code with caution.
-Bash
-IGNORE_WHEN_COPYING_END
+```
 
 Este script cargará el índice desde vector_store_index/ y realizará una consulta de ejemplo, mostrando los resultados encontrados. Asegúrate de ajustar la consulta de prueba dentro del script para que sea relevante a tus datos.
 
 Las pruebas unitarias y de integración más completas se encuentran en el directorio tests/.
 
-🤝 Contribuciones
+## 🤝 Contribuciones
 
 Este es un proyecto de tesis, pero las sugerencias y mejoras son bienvenidas. Por favor, abre un issue para discutir cambios importantes antes de realizar un pull request.
 
-📄 Licencia
+## 📄 Licencia
 
 (Opcional: Especifica una licencia si aplica, e.g., MIT, Apache 2.0, o indica que es para fines académicos).
 
-🙏 Agradecimientos
+## 🙏 Agradecimientos
 
 (Opcional: Menciona a tus tutores, fuentes de datos, librerías clave, etc.).
 
