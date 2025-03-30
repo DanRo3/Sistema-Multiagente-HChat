@@ -12,29 +12,29 @@ El núcleo del sistema es una arquitectura multiagente orquestada con LangChain 
 
 ## ✨ Características Principales
 
-*   **Procesamiento de Lenguaje Natural:** Interpreta consultas de usuario en español.
-*   **Búsqueda Semántica:** Utiliza embeddings y FAISS para encontrar información relevante en una base de datos vectorial.
-*   **Reconocimiento de Intención:** Determina si el usuario busca una respuesta textual o una visualización.
-*   **Generación Contextual:** Enriquece la información recuperada con estadísticas o datos complementarios.
-*   **Generación Dinámica de Código:** Crea scripts Python bajo demanda para análisis o visualización.
-*   **Visualización Dinámica:** Ejecuta código Python para generar gráficos (imágenes PNG) como respuesta.
-*   **Respuestas Flexibles:** Devuelve resultados en formato texto, código (como texto) o imagen (base64).
-*   **Arquitectura Multiagente:** Flujo de trabajo orquestado con LangChain/Langraph para modularidad y control.
-*   **API Robusta:** Expone la funcionalidad a través de un endpoint FastAPI.
+**Procesamiento de Lenguaje Natural:** Interpreta consultas de usuario en español.
+**Búsqueda Semántica:** Utiliza embeddings y FAISS para encontrar información relevante en una base de datos vectorial.
+**Reconocimiento de Intención:** Determina si el usuario busca una respuesta textual o una visualización.
+**Generación Contextual:** Enriquece la información recuperada con estadísticas o datos complementarios.
+**Generación Dinámica de Código:** Crea scripts Python bajo demanda para análisis o visualización.
+**Visualización Dinámica:** Ejecuta código Python para generar gráficos (imágenes PNG) como respuesta.
+**Respuestas Flexibles:** Devuelve resultados en formato texto, código (como texto) o imagen (base64).
+**Arquitectura Multiagente:** Flujo de trabajo orquestado con LangChain/Langraph para modularidad y control.
+**API Robusta:** Expone la funcionalidad a través de un endpoint FastAPI.
 
 ## 🏗️ Arquitectura del Sistema
 
 El sistema sigue una arquitectura de microservicio basada en FastAPI, con un flujo de trabajo multiagente gestionado por Langraph:
 
-1.  **Recepción (FastAPI):** El usuario envía una consulta vía POST al endpoint `/api/query`.
-2.  **Moderación (Moderator Agent):** Analiza la consulta, extrae palabras clave y determina la intención (texto/visualización).
-3.  **Recuperación (Retrieval Agent):** Genera embeddings de la consulta/keywords y busca documentos similares en la base de datos vectorial FAISS.
-4.  **Contextualización (Contextualizer Agent):** Sintetiza la información recuperada, añade contexto y prepara los datos para la respuesta o para el agente Python.
-5.  **Generación/Visualización (Python Agent & Executor):** Si se requiere visualización, genera código Python (e.g., usando Pandas, Matplotlib), lo ejecuta de forma segura y captura la imagen resultante.
-6.  **Validación (Validation Agent):** Revisa la coherencia y relevancia de la respuesta generada (texto o imagen) respecto a la consulta original.
-7.  **Entrega (Moderator Agent / FastAPI):** Ensambla la respuesta final y la devuelve al usuario en formato JSON, conteniendo texto y/o una imagen codificada en base64.
+1. **Recepción (FastAPI):** El usuario envía una consulta vía POST al endpoint `/api/query`.
+2. **Moderación (Moderator Agent):** Analiza la consulta, extrae palabras clave y determina la intención (texto/visualización).
+3. **Recuperación (Retrieval Agent):** Genera embeddings de la consulta/keywords y busca documentos similares en la base de datos vectorial FAISS.
+4. **Contextualización (Contextualizer Agent):** Sintetiza la información recuperada, añade contexto y prepara los datos para la respuesta o para el agente Python.
+5. **Generación/Visualización (Python Agent & Executor):** Si se requiere visualización, genera código Python (e.g., usando Pandas, Matplotlib), lo ejecuta de forma segura y captura la imagen resultante.
+6. **Validación (Validation Agent):** Revisa la coherencia y relevancia de la respuesta generada (texto o imagen) respecto a la consulta original.
+7. **Entrega (Moderator Agent / FastAPI):** Ensambla la respuesta final y la devuelve al usuario en formato JSON, conteniendo texto y/o una imagen codificada en base64.
 
-```mermaid
+```console
 graph LR
     A[Usuario] -- Consulta (NL) --> B(FastAPI Endpoint /api/query);
     B -- Query --> C{Moderator Agent (Proxy)};
@@ -52,6 +52,7 @@ graph LR
     J -- Respuesta Preliminar --> K[Moderator Agent (Ensamblador)];
     K -- Respuesta Final (Texto/Imagen) --> B;
     B -- JSON Response --> A;
+```
 
 🛠️ Tecnologías Utilizadas
 
