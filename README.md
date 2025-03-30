@@ -106,7 +106,7 @@ pip (gestor de paquetes de Python)
 Git
 
 1. Clonar el Repositorio
-git clone <url-del-repositorio>
+git clone < url-del-repositorio >
 cd tesis-multiagente-bi
 IGNORE_WHEN_COPYING_START
 content_copy
@@ -164,7 +164,7 @@ Este proceso leerá el CSV, generará embeddings usando sentence-transformers/al
 
 MUY IMPORTANTE: Copia los archivos .faiss y .pkl generados a la carpeta vector_store_index/ en la raíz del proyecto.
 
-6. Ejecutar la Aplicación FastAPI
+6.Ejecutar la Aplicación FastAPI
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 IGNORE_WHEN_COPYING_START
 content_copy
@@ -300,22 +300,15 @@ Desarrollado como parte de [Nombre de tu Tesis/Programa Académico] en [Tu Unive
 
 **Puntos Clave y Mejoras en este README:**
 
-*   **Título Claro y Emojis:** Llama la atención y resume el propósito.
-*   **Resumen Conciso:** Explica el qué, el porqué y el cómo de alto nivel.
-*   **Características Detalladas:** Lista las capacidades clave del sistema.
-*   **Diagrama de Arquitectura:** Usa Mermaid para visualizar el flujo (se renderizará en plataformas como GitHub/GitLab).
-*   **Tecnologías Organizadas:** Lista clara de todas las herramientas usadas.
-*   **Estructura de Proyecto:** Facilita la navegación por el código fuente.
-*   **Instrucciones Claras (`Getting Started`):** Pasos numerados y comandos exactos para la instalación y configuración.
-*   **Énfasis en Pasos Críticos:** Resalta la importancia de configurar `.env` y construir/ubicar el índice FAISS.
-*   **Ejemplos de Uso:** Muestra cómo interactuar con la API usando `curl` y los formatos esperados de request/response.
-*   **Sección de Pruebas:** Indica cómo realizar verificaciones rápidas y dónde encontrar pruebas más formales.
-*   **Secciones Opcionales:** Incluye placeholders para Licencia, Contribuciones, Agradecimientos.
-*   **Formato Markdown:** Usa encabezados, listas, bloques de código y otros elementos para mejorar la legibilidad.
-
-¡Espero que este README sea una excelente carta de presentación para tu proyecto de tesis!
-IGNORE_WHEN_COPYING_START
-content_copy
-download
-Use code with caution.
-IGNORE_WHEN_COPYING_END
+**Título Claro y Emojis:** Llama la atención y resume el propósito.
+**Resumen Conciso:** Explica el qué, el porqué y el cómo de alto nivel.
+**Características Detalladas:** Lista las capacidades clave del sistema.
+**Diagrama de Arquitectura:** Usa Mermaid para visualizar el flujo (se renderizará en plataformas como GitHub/GitLab).
+**Tecnologías Organizadas:** Lista clara de todas las herramientas usadas.
+**Estructura de Proyecto:** Facilita la navegación por el código fuente.
+**Instrucciones Claras (`Getting Started`):** Pasos numerados y comandos exactos para la instalación y configuración.
+**Énfasis en Pasos Críticos:** Resalta la importancia de configurar `.env` y construir/ubicar el índice FAISS.
+**Ejemplos de Uso:** Muestra cómo interactuar con la API usando `curl` y los formatos esperados de request/response.
+**Sección de Pruebas:** Indica cómo realizar verificaciones rápidas y dónde encontrar pruebas más formales.
+**Secciones Opcionales:** Incluye placeholders para Licencia, Contribuciones, Agradecimientos.
+**Formato Markdown:** Usa encabezados, listas, bloques de código y otros elementos para mejorar la legibilidad.
