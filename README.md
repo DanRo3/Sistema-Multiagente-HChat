@@ -72,6 +72,9 @@ Librerías Clave: langchain, langgraph, fastapi, uvicorn, faiss-cpu (o faiss-gpu
 
 Contenerización (Opcional): Docker
 
+
+```console
+
 📂 Estructura del Proyecto
 /tesis-multiagente-bi/
 ├── app/                      # Código fuente de la aplicación FastAPI
@@ -91,11 +94,9 @@ Contenerización (Opcional): Docker
 ├── Dockerfile                # Opcional
 ├── requirements.txt          # Dependencias Python
 └── README.md                 # Este archivo
-IGNORE_WHEN_COPYING_START
-content_copy
-download
-Use code with caution.
-IGNORE_WHEN_COPYING_END
+
+```
+
 🚀 Cómo Empezar
 Prerrequisitos
 
@@ -105,6 +106,7 @@ pip (gestor de paquetes de Python)
 
 Git
 
+```
 1. Clonar el Repositorio
 git clone < url-del-repositorio >
 cd tesis-multiagente-bi
@@ -154,7 +156,11 @@ download
 Use code with caution.
 Dotenv
 IGNORE_WHEN_COPYING_END
+
+
 5. Construir la Base de Datos Vectorial FAISS
+```
+
 
 Asegúrate de tener tus datos fuente (e.g., datos.csv) en la carpeta data/.
 
