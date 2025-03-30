@@ -4,7 +4,7 @@ import numpy as np
 import pickle
 from pathlib import Path
 from .config import settings
-from .embeddings import get_query_embedding # Importamos para usar en search
+from .embeddings import get_query_embedding 
 
 _index = None
 _metadata = None
