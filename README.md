@@ -248,27 +248,5 @@ Las pruebas unitarias y de integración más completas se encuentran en el direc
 
 Este es un proyecto de tesis, pero las sugerencias y mejoras son bienvenidas. Por favor, abre un issue para discutir cambios importantes antes de realizar un pull request.
 
-## 📄 Licencia
 
-(Opcional: Especifica una licencia si aplica, e.g., MIT, Apache 2.0, o indica que es para fines académicos).
-
-## 🙏 Agradecimientos
-
-(Opcional: Menciona a tus tutores, fuentes de datos, librerías clave, etc.).
-
-Desarrollado como parte de [Nombre de tu Tesis/Programa Académico] en [Tu Universidad/Institución].
-
-**Puntos Clave y Mejoras en este README:**
-
-**Título Claro y Emojis:** Llama la atención y resume el propósito.
-**Resumen Conciso:** Explica el qué, el porqué y el cómo de alto nivel.
-**Características Detalladas:** Lista las capacidades clave del sistema.
-**Diagrama de Arquitectura:** Usa Mermaid para visualizar el flujo (se renderizará en plataformas como GitHub/GitLab).
-**Tecnologías Organizadas:** Lista clara de todas las herramientas usadas.
-**Estructura de Proyecto:** Facilita la navegación por el código fuente.
-**Instrucciones Claras (`Getting Started`):** Pasos numerados y comandos exactos para la instalación y configuración.
-**Énfasis en Pasos Críticos:** Resalta la importancia de configurar `.env` y construir/ubicar el índice FAISS.
-**Ejemplos de Uso:** Muestra cómo interactuar con la API usando `curl` y los formatos esperados de request/response.
-**Sección de Pruebas:** Indica cómo realizar verificaciones rápidas y dónde encontrar pruebas más formales.
-**Secciones Opcionales:** Incluye placeholders para Licencia, Contribuciones, Agradecimientos.
-**Formato Markdown:** Usa encabezados, listas, bloques de código y otros elementos para mejorar la legibilidad.
+**Desarrollado como parte de Daniel Rojas Grass en la Universidad de las Ciencias Informáticas.**
