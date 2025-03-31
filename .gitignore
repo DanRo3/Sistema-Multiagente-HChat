@@ -14,3 +14,4 @@ vector_store_index/
 # Otros
 *.log
 *.tmp
+huggingface_cache/
