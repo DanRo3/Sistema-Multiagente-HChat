@@ -237,7 +237,7 @@ Error:
 Para verificar rápidamente la carga y búsqueda en el índice FAISS (antes de ejecutar toda la aplicación), puedes usar el script de prueba:
 
 ```bash
-python test_faiss_query.py
+python test/test_faiss_query.py #example
 ```
 
 Este script cargará el índice desde vector_store_index/ y realizará una consulta de ejemplo, mostrando los resultados encontrados. Asegúrate de ajustar la consulta de prueba dentro del script para que sea relevante a tus datos.
@@ -249,4 +249,4 @@ Las pruebas unitarias y de integración más completas se encuentran en el direc
 Este es un proyecto de tesis, pero las sugerencias y mejoras son bienvenidas. Por favor, abre un issue para discutir cambios importantes antes de realizar un pull request.
 
 
-**Desarrollado como parte de Daniel Rojas Grass en la Universidad de las Ciencias Informáticas.**
+**Desarrollado como parte de un proyecto de tesis para optar por el titulo de Ingeniero en Ciencias Informáticas, por Daniel Rojas Grass en la Universidad de las Ciencias Informáticas.**
