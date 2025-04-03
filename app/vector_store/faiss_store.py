@@ -1,114 +1,94 @@
 # app/vector_store/faiss_store.py
-import faiss
-import numpy as np
-import pickle
-from pathlib import Path
-from .config import settings
-from .embeddings import get_query_embedding 
+import os
+from langchain_community.vectorstores import FAISS
+from app.core.config import settings
+from app.core.embeddings import get_embeddings_model # Importa desde tu módulo
+from typing import Optional, List, Tuple, Any
+from langchain_core.documents import Document # Para type hinting
 
-_index = None
-_metadata = None
+_vector_store: Optional[FAISS] = None
 
-def load_vector_store():
-    """Carga el índice FAISS y los metadatos desde los archivos."""
-    global _index, _metadata
-    if _index is None:
-        index_path = settings.faiss_index_path
-        metadata_path = settings.faiss_metadata_path
-        if not index_path.exists():
-            raise FileNotFoundError(f"FAISS index file not found at {index_path}")
-        if not metadata_path.exists():
-            raise FileNotFoundError(f"Metadata file not found at {metadata_path}")
+def load_faiss_index() -> Optional[FAISS]:
+    """Carga el índice FAISS desde la carpeta configurada (singleton)."""
+    global _vector_store
+    if _vector_store is not None:
+        # print("Índice FAISS ya está cargado.") # Opcional: Evitar logs repetidos
+        return _vector_store
 
-        print(f"Loading FAISS index from: {index_path}")
-        _index = faiss.read_index(str(index_path))
-        print(f"Index loaded. Total vectors: {_index.ntotal}")
+    index_folder = settings.FAISS_INDEX_FOLDER
+    index_name = settings.FAISS_INDEX_NAME
+    faiss_file_path = os.path.join(index_folder, f"{index_name}.faiss")
+    pkl_file_path = os.path.join(index_folder, f"{index_name}.pkl")
 
-        print(f"Loading metadata from: {metadata_path}")
-        with open(metadata_path, 'rb') as f:
-            _metadata = pickle.load(f)
-        print(f"Metadata loaded for {_len(_metadata)} items.") # Use len() defensively
+    print(f"Intentando cargar índice FAISS desde: {index_folder}/{index_name}")
 
-def search_similar_documents(query: str, k: int = 5) -> list[dict]:
-    """
-    Busca documentos similares a una consulta en el índice FAISS.
+    if not os.path.exists(faiss_file_path) or not os.path.exists(pkl_file_path):
+        print(f"--- ERROR ---")
+        print(f"No se encontraron los archivos del índice FAISS: {faiss_file_path}, {pkl_file_path}")
+        return None
 
-    Args:
-        query: La consulta del usuario en lenguaje natural.
-        k: El número de documentos similares a devolver.
-
-    Returns:
-        Una lista de diccionarios, cada uno representando un documento encontrado,
-        incluyendo al menos 'text', 'score' (distancia), y 'original_id'.
-        Devuelve una lista vacía si el índice no está cargado o no se encuentran resultados.
-    """
-    global _index, _metadata
-    if _index is None or _metadata is None:
-        try:
-            load_vector_store()
-        except FileNotFoundError as e:
-            print(f"Error loading vector store: {e}")
-            return [] # Devuelve vacío si no se puede cargar
-        except Exception as e:
-            print(f"Unexpected error loading vector store: {e}")
-            return []
-
-
-    if _index.ntotal == 0:
-        print("Warning: FAISS index is empty.")
-        return []
-
-    print(f"Searching for {k} documents similar to: '{query}'")
-    query_embedding = get_query_embedding(query)
-    query_embedding_np = np.array([query_embedding]).astype('float32')
-
-    # Realizar la búsqueda
     try:
-        distances, indices = _index.search(query_embedding_np, k)
+        embeddings = get_embeddings_model()
+        if not embeddings:
+            raise ValueError("Modelo de embeddings no disponible para cargar FAISS.")
+
+        print("Cargando índice local FAISS...")
+        loaded_db = FAISS.load_local(
+            folder_path=index_folder,
+            embeddings=embeddings,
+            index_name=index_name,
+            allow_dangerous_deserialization=True # ¡Necesario para PKL!
+        )
+        print("¡Índice FAISS cargado exitosamente!")
+        _vector_store = loaded_db
+        return _vector_store
+
     except Exception as e:
-        print(f"Error during FAISS search: {e}")
+        print(f"--- ERROR al cargar el índice FAISS ---: {e}")
+        _vector_store = None
+        return None
+
+def get_faiss_db() -> Optional[FAISS]:
+    """Devuelve la instancia cargada de la base de datos FAISS."""
+    if _vector_store is None:
+        load_faiss_index() # Intenta cargar si no lo está
+    return _vector_store
+
+# Función de búsqueda mejorada que usará el retriever agent
+def search_documents(query: str, k: int = 20, filter_criteria: Optional[dict] = None) -> List[Document]:
+    """
+    Realiza búsqueda por similitud y aplica filtrado post-recuperación.
+    Devuelve solo los documentos.
+    """
+    vector_store = get_faiss_db()
+    if not vector_store:
+        print("Error: Base de datos vectorial no disponible para búsqueda.")
         return []
 
-    results = []
-    if indices.size == 0 or distances.size == 0:
-         print("No results found from FAISS search.")
-         return []
+    try:
+        print(f"Buscando k={k} documentos para query: '{query[:50]}...'") # Log corto
+        results_with_scores: List[Tuple[Document, float]] = vector_store.similarity_search_with_score(query, k=k)
 
-    # Asegurarse de que indices y distances tengan la forma esperada (shape (1, k))
-    if indices.ndim == 1:
-        indices = indices.reshape(1, -1)
-    if distances.ndim == 1:
-        distances = distances.reshape(1, -1)
+        if not filter_criteria:
+            print(f"Devolviendo {len(results_with_scores)} resultados sin filtro.")
+            return [doc for doc, score in results_with_scores]
 
+        # Filtrado Post-recuperación
+        print(f"Aplicando filtro: {filter_criteria}")
+        filtered_docs = []
+        for doc, score in results_with_scores:
+            metadata = doc.metadata
+            match = True
+            for key, value in filter_criteria.items():
+                if key not in metadata or str(metadata.get(key)).lower() != str(value).lower(): # Comparación insensible a mayúsculas
+                    match = False
+                    break
+            if match:
+                filtered_docs.append(doc)
 
-    for i in range(indices.shape[1]): # Iterar sobre los k resultados
-        faiss_id = indices[0, i]
-        distance = distances[0, i]
+        print(f"Devolviendo {len(filtered_docs)} resultados después del filtro.")
+        return filtered_docs
 
-        # FAISS puede devolver -1 si hay menos de k resultados
-        if faiss_id == -1:
-            continue
-
-        # Recuperar la información del documento usando el metadata
-        doc_info = _metadata.get(faiss_id)
-        if doc_info:
-             results.append({
-                 "text": doc_info.get('text', 'N/A'),
-                 "score": float(distance), # Convertir a float estándar
-                 "original_id": doc_info.get('original_id', 'N/A'),
-                 "faiss_id": int(faiss_id) # ID interno de FAISS
-             })
-        else:
-             print(f"Warning: Metadata not found for FAISS ID {faiss_id}")
-
-
-    print(f"Found {len(results)} relevant documents.")
-    return results
-
-# Carga inicial al importar el módulo (opcional, pero común)
-# try:
-#     load_vector_store()
-# except FileNotFoundError:
-#     print("Vector store not found on initial load. Will try again on first search.")
-# except Exception as e:
-#      print(f"Error during initial vector store load: {e}")
+    except Exception as e:
+        print(f"Error durante la búsqueda de documentos: {e}")
+        return []

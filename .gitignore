@@ -7,7 +7,7 @@ __pycache__/
 # Archivos de configuración local
 .env
 # Bases de datos / Índices
-vector_store_index/
+#vector_store_index/
 # Artefactos de IDE
 .vscode/
 .idea/
