@@ -116,24 +116,24 @@ def get_compiled_graph() -> StateGraph:
     return _compiled_graph
 
 # --- Bloque de prueba simple (opcional) ---
-if __name__ == '__main__':
-    # Esta prueba solo verifica que el grafo se compile sin errores.
-    # No lo ejecuta. La ejecución real se hará desde FastAPI.
-    print("--- Probando la Compilación del Grafo Langraph ---")
-    try:
-        test_graph = get_compiled_graph()
-        print("\nEstructura del Grafo (Nodos):", test_graph.nodes)
-        # Puedes intentar visualizarlo si tienes las dependencias opcionales
-        # try:
-        #     img_bytes = test_graph.get_graph().draw_mermaid_png()
-        #     with open("graph_structure.png", "wb") as f:
-        #         f.write(img_bytes)
-        #     print("Diagrama del grafo guardado como graph_structure.png")
-        # except Exception as draw_error:
-        #     print(f"No se pudo generar diagrama del grafo: {draw_error}")
-        #     print("Asegúrate de tener instaladas las dependencias opcionales: pip install pygraphviz matplotlib")
+# if __name__ == '__main__':
+#     # Esta prueba solo verifica que el grafo se compile sin errores.
+#     # No lo ejecuta. La ejecución real se hará desde FastAPI.
+#     print("--- Probando la Compilación del Grafo Langraph ---")
+#     try:
+#         test_graph = get_compiled_graph()
+#         print("\nEstructura del Grafo (Nodos):", test_graph.nodes)
+#         # Puedes intentar visualizarlo si tienes las dependencias opcionales
+#         # try:
+#         #     img_bytes = test_graph.get_graph().draw_mermaid_png()
+#         #     with open("graph_structure.png", "wb") as f:
+#         #         f.write(img_bytes)
+#         #     print("Diagrama del grafo guardado como graph_structure.png")
+#         # except Exception as draw_error:
+#         #     print(f"No se pudo generar diagrama del grafo: {draw_error}")
+#         #     print("Asegúrate de tener instaladas las dependencias opcionales: pip install pygraphviz matplotlib")
 
-    except Exception as e:
-        print(f"\nError durante la compilación o prueba del grafo: {e}")
-        import traceback
-        traceback.print_exc()
+#     except Exception as e:
+#         print(f"\nError durante la compilación o prueba del grafo: {e}")
+#         import traceback
+#         traceback.print_exc()

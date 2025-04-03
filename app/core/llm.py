@@ -1,3 +1,4 @@
+from typing import Optional
 import google.generativeai as genai
 from app.core.config import settings
 from langchain_google_genai import ChatGoogleGenerativeAI
