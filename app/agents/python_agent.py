@@ -1,6 +1,6 @@
 import re
 from typing import Dict, Optional, Any
-from app.core.llm import get_gemini_llm 
+from app.core.llm import get_llm 
 from langchain_core.prompts import ChatPromptTemplate
 
 # --- Plantilla de Prompt para Generación de Código Python ---
@@ -78,7 +78,7 @@ def generate_python_code(original_query: str, data_for_python: Optional[Any]) ->
     print(f"Agente Python: Datos recibidos (primeros 200 chars): {data_str[:200]}...")
 
     # Obtener el LLM (quizás un poco más de temperatura para generar código variado pero siguiendo instrucciones)
-    llm = get_gemini_llm(temperature=0.2)
+    llm = get_llm()
     if not llm:
         print("Error Crítico: LLM no disponible para el agente Python.")
         return {"python_code": None}

@@ -1,7 +1,7 @@
 import json
 import re
 from typing import Dict, List, Optional, Any
-from app.core.llm import get_gemini_llm # Importa la función para obtener el LLM
+from app.core.llm import get_llm # Importa la función para obtener el LLM
 from langchain_core.documents import Document # Para type hinting
 from langchain_core.prompts import ChatPromptTemplate # Para las plantillas de prompt
 
@@ -122,7 +122,7 @@ def contextualize(original_query: str, intent: str, retrieved_docs: List[Documen
                 "data_for_python": None}
 
     # Obtener el LLM (usar temperatura baja para tareas estructuradas/resúmenes)
-    llm = get_gemini_llm(temperature=0.1)
+    llm = get_llm()
     if not llm:
         print("Error Crítico: LLM no disponible para el agente contextualizador.")
         return {"summary": "Error interno: No se pudo procesar la solicitud en este momento.",

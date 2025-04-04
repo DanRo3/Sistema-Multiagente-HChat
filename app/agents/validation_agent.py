@@ -1,7 +1,7 @@
 import json
 import re
 from typing import Dict, Optional, Any, Tuple
-from app.core.llm import get_gemini_llm # Importa la función para obtener el LLM
+from app.core.llm import get_llm # Importa la función para obtener el LLM
 from langchain_core.prompts import ChatPromptTemplate # Para la plantilla de prompt
 
 # --- Plantilla de Prompt para Validación ---
@@ -131,7 +131,7 @@ def validate(original_query: str,final_content: Optional[str],execution_error: O
     print(f"Validador: Contenido para LLM (preview):\n---\n{content_for_llm[:200]}...\n---")
 
     # --- Paso 4: Llamar al LLM para Validación ---
-    llm = get_gemini_llm(temperature=0.0) # Precisión para la validación
+    llm = get_llm() # Precisión para la validación
     if not llm:
         print("Advertencia (Validador): LLM no disponible. Aprobando la respuesta por defecto.")
         # Fallback: Si no hay LLM, asumimos que el contenido es válido.
