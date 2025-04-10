@@ -161,7 +161,7 @@ MUY IMPORTANTE: Copia los archivos .faiss y .pkl generados a la carpeta vector_s
 6.Ejecutar la Aplicación FastAPI
 
 ```bash
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8008
 ```
 
 --reload: Reinicia el servidor automáticamente al detectar cambios en el código (útil para desarrollo).

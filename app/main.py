@@ -2,19 +2,12 @@ from fastapi import FastAPI
 from contextlib import asynccontextmanager
 import logging
 import uvicorn
-import os # Necesario para getenv si se usa en el bloque __main__
-
-# Importar configuración y la función GETTER genérica del LLM
+import os
 from app.core.config import settings
-# from app.core.llm import configure_genai, get_gemini_llm # <-- ELIMINA o COMENTA esta línea
-from app.core.llm import get_llm # <-- IMPORTA la nueva función genérica
-
-# Importar el resto de inicializadores y el builder del grafo
+from app.core.llm import get_llm
 from app.core.embeddings import initialize_embeddings_model
 from app.vector_store.faiss_store import load_faiss_index
 from app.orchestration.graph_builder import get_compiled_graph
-
-# Importar el router de la API
 from app.api.endpoints import router as api_router
 
 # Configurar logging básico para la aplicación

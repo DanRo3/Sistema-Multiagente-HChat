@@ -50,11 +50,11 @@ def build_graph() -> StateGraph:
     workflow.add_node("moderator", agent_nodes.run_moderator)
     workflow.add_node("retriever", agent_nodes.run_retriever)
     workflow.add_node("contextualizer", agent_nodes.run_contextualizer)
-    workflow.add_node("python_agent", agent_nodes.run_python_agent) # Nodo que genera código
-    workflow.add_node("code_executor", agent_nodes.run_code_executor) # Nodo que ejecuta código
-    workflow.add_node("validator", agent_nodes.run_validator) # Nodo final de validación
+    workflow.add_node("python_agent", agent_nodes.run_python_agent)
+    workflow.add_node("code_executor", agent_nodes.run_code_executor)
+    workflow.add_node("validator", agent_nodes.run_validator)
 
-    # --- 2. Definir el Punto de Entrada ---
+    # --- 2.Punto de Entrada ---
     # Especifica por dónde comienza el flujo.
     print("Estableciendo punto de entrada: 'moderator'")
     workflow.set_entry_point("moderator")
