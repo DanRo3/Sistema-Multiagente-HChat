@@ -244,6 +244,8 @@ Este script cargará el índice desde vector_store_index/ y realizará una consu
 
 Las pruebas unitarias y de integración más completas se encuentran en el directorio tests/.
 
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/DanRo3/tesis-multiagente)
+
 ## 🤝 Contribuciones
 
 Este es un proyecto de tesis, pero las sugerencias y mejoras son bienvenidas. Por favor, abre un issue para discutir cambios importantes antes de realizar un pull request.
