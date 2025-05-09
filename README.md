@@ -1,5 +1,7 @@
 # 🤖📊 Sistema Multiagente IA para Consultas en Lenguaje Natural y Visualización de Datos
 
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/DanRo3/tesis-multiagente)
+
 **Proyecto de Tesis: Construcción de un sistema multiagente basado en IA para la extracción y visualización de información desde bases de datos vectoriales mediante lenguaje natural.**
 
 ---
@@ -243,8 +245,6 @@ python test/test_faiss_query.py #example
 Este script cargará el índice desde vector_store_index/ y realizará una consulta de ejemplo, mostrando los resultados encontrados. Asegúrate de ajustar la consulta de prueba dentro del script para que sea relevante a tus datos.
 
 Las pruebas unitarias y de integración más completas se encuentran en el directorio tests/.
-
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/DanRo3/tesis-multiagente)
 
 ## 🤝 Contribuciones
 
