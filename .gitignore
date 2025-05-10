@@ -15,3 +15,5 @@ __pycache__/
 *.log
 *.tmp
 huggingface_cache/
+pandasai_charts/
+cache/

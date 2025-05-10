@@ -46,7 +46,7 @@ class Settings(BaseSettings):
 
     # --- Configuración Ejecución de Código ---
     CODE_EXECUTION_TIMEOUT: int = Field(default=15, description="Timeout en segundos para ejecución de código Python")
-
+    CSV_FILE_PATH: str = Field(default="data/DataLimpia.csv", description="Ruta al archivo CSV principal con los datos")
     # --- Configuración del Modelo Pydantic ---
     model_config = SettingsConfigDict(
         env_file='.env',              # Nombre del archivo .env
@@ -54,6 +54,11 @@ class Settings(BaseSettings):
         extra='ignore',               # Ignorar variables extra en el entorno o .env
         case_sensitive=False          # Nombres de variables insensibles a mayúsculas/minúsculas
     )
+    # En app/core/config.py, dentro de la clase Settings:
+    PANDASAI_VERBOSE: bool = Field(default=True, description="Habilitar logs detallados de PandasAI")
+    PANDASAI_ENABLE_CACHE: bool = Field(default=False, description="Habilitar caché de respuestas en PandasAI")
+    PANDASAI_CHART_DIR_NAME: str = Field(default="pandasai_charts", description="Nombre del directorio donde PandasAI guarda los gráficos")
+    PANDASAI_MAX_RETRIES: int = Field(default=3, description="Número máximo de reintentos de PandasAI para corregir código") # PandasAI puede reintentar
 
     # --- Validadores (Opcional pero recomendado) ---
     @validator('GEMINI_API_KEY', 'OPENAI_API_KEY', pre=True, always=True)

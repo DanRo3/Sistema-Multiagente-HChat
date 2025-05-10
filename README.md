@@ -1,252 +1,228 @@
-# 🤖📊 Sistema Multiagente IA para Consultas en Lenguaje Natural y Visualización de Datos
-
-**Proyecto de Tesis: Construcción de un sistema multiagente basado en IA para la extracción y visualización de información desde bases de datos vectoriales mediante lenguaje natural.**
+# 🚢📊 HChat: Un Sistema Multiagente IA 🌊
+**Proyecto de Tesis: Sistema Inteligente para Consultas en Lenguaje Natural y Visualización de Datos sobre Registros Marítimos Históricos mediante un Enfoque Multiagente y PandasAI.**
 
 ---
 
-## 📝 Resumen del Proyecto
+## 📜 Resumen del Proyecto
 
-Este proyecto presenta un sistema avanzado basado en Inteligencia Artificial diseñado para interactuar con bases de datos vectoriales complejas utilizando consultas en lenguaje natural (español). El sistema, construido como un microservicio con FastAPI, no solo extrae información relevante mediante búsqueda por similitud semántica, sino que también es capaz de interpretar la intención del usuario para generar respuestas textuales concisas o visualizaciones de datos (gráficas) dinámicamente generadas.
+"HChat" es un sistema avanzado de Inteligencia Artificial diseñado para revolucionar la forma en que interactuamos con datos históricos tabulares, específicamente registros marítimos del "Diario de la Marina". A través de consultas en lenguaje natural (español), este sistema no solo extrae información precisa, sino que también genera respuestas textuales concisas y visualizaciones de datos (gráficas) dinámicamente.
 
-El núcleo del sistema es una arquitectura multiagente orquestada con LangChain y Langraph, donde cada agente se especializa en una tarea específica (moderación, recuperación, contextualización, generación de código, validación), asegurando un procesamiento modular, robusto y escalable.
+Construido como un microservicio utilizando FastAPI, el núcleo del sistema es una **arquitectura multiagente orquestada con LangGraph**. En esta iteración, el sistema se especializa en el uso de **PandasAI** como motor principal para el análisis de datos y la generación de gráficos, permitiendo una interacción sofisticada y directa con los datos estructurados del archivo CSV. Cada agente se enfoca en una tarea específica (moderación y formulación de consultas, ejecución de análisis con PandasAI, contextualización y validación), asegurando un procesamiento modular, robusto y eficiente.
 
-## ✨ Características Principales
+## ✨ Características Destacadas
 
-**Procesamiento de Lenguaje Natural:** Interpreta consultas de usuario en español.
-**Búsqueda Semántica:** Utiliza embeddings y FAISS para encontrar información relevante en una base de datos vectorial.
-**Reconocimiento de Intención:** Determina si el usuario busca una respuesta textual o una visualización.
-**Generación Contextual:** Enriquece la información recuperada con estadísticas o datos complementarios.
-**Generación Dinámica de Código:** Crea scripts Python bajo demanda para análisis o visualización.
-**Visualización Dinámica:** Ejecuta código Python para generar gráficos (imágenes PNG) como respuesta.
-**Respuestas Flexibles:** Devuelve resultados en formato texto, código (como texto) o imagen (base64).
-**Arquitectura Multiagente:** Flujo de trabajo orquestado con LangChain/Langraph para modularidad y control.
-**API Robusta:** Expone la funcionalidad a través de un endpoint FastAPI.
+*   🗣️ **Procesamiento Avanzado de Lenguaje Natural:** Interpreta consultas complejas de usuarios en español.
+*   🐼 **Análisis Inteligente con PandasAI:** Utiliza PandasAI para:
+    *   Filtrar datos con precisión sobre múltiples columnas.
+    *   Realizar cálculos y agregaciones (conteos, promedios, etc.).
+    *   Responder preguntas directas sobre los datos tabulares.
+    *   Buscar contenido dentro de columnas textuales (como `parsed_text`).
+*   📊 **Generación Dinámica de Gráficos:** PandasAI genera y guarda gráficos (PNG) basados en las solicitudes del usuario.
+*   🎯 **Reconocimiento de Intención:** Determina si el usuario busca una respuesta textual o una visualización.
+*   📝 **Respuestas Flexibles:** Devuelve resultados en formato texto y/o imagen (codificada en Base64 con Data URI).
+*   🤖 **Arquitectura Multiagente Refinada:** Flujo de trabajo orquestado con LangChain/LangGraph, optimizado para PandasAI.
+*   🚀 **API Robusta con FastAPI:** Expone la funcionalidad a través de un endpoint claro y eficiente.
+*   ⚙️ **Selección Dinámica de LLM:** Configurable para usar diferentes LLMs (OpenAI GPT, Google Gemini) como motor de razonamiento para los agentes y PandasAI.
 
-## 🏗️ Arquitectura del Sistema
+## 🏗️ Arquitectura del Sistema (Enfoque PandasAI)
 
-El sistema sigue una arquitectura de microservicio basada en FastAPI, con un flujo de trabajo multiagente gestionado por Langraph:
+El sistema opera como un microservicio FastAPI, donde LangGraph orquesta el siguiente flujo de agentes:
 
-1. **Recepción (FastAPI):** El usuario envía una consulta vía POST al endpoint `/api/query`.
-2. **Moderación (Moderator Agent):** Analiza la consulta, extrae palabras clave y determina la intención (texto/visualización).
-3. **Recuperación (Retrieval Agent):** Genera embeddings de la consulta/keywords y busca documentos similares en la base de datos vectorial FAISS.
-4. **Contextualización (Contextualizer Agent):** Sintetiza la información recuperada, añade contexto y prepara los datos para la respuesta o para el agente Python.
-5. **Generación/Visualización (Python Agent & Executor):** Si se requiere visualización, genera código Python (e.g., usando Pandas, Matplotlib), lo ejecuta de forma segura y captura la imagen resultante.
-6. **Validación (Validation Agent):** Revisa la coherencia y relevancia de la respuesta generada (texto o imagen) respecto a la consulta original.
-7. **Entrega (Moderator Agent / FastAPI):** Ensambla la respuesta final y la devuelve al usuario en formato JSON, conteniendo texto y/o una imagen codificada en base64.
+1.  **Recepción (FastAPI):** El usuario (o un servicio intermediario como un backend Django) envía una consulta vía `POST` al endpoint `/api/query`.
+2.  **Agente Moderador:**
+    *   Analiza la consulta original del usuario.
+    *   Determina la `intent` final (textual o visual).
+    *   Transforma la consulta del usuario en una `pandasai_query` precisa y optimizada, indicando a PandasAI qué operación realizar (filtrar, calcular, graficar, buscar en texto) y qué formato de salida se espera.
+3.  **Agente Ejecutor PandasAI:**
+    *   Recibe la `pandasai_query`.
+    *   Inicializa un `SmartDataframe` de PandasAI con el dataset CSV de registros marítimos.
+    *   Ejecuta `smart_df.chat(pandasai_query)`.
+    *   PandasAI (usando el LLM configurado) genera y ejecuta internamente código Pandas.
+    *   Si se solicita un gráfico, PandasAI lo guarda como un archivo PNG y devuelve la ruta al archivo.
+    *   Si se solicitan datos, devuelve el resultado (string, número, lista de diccionarios representando un DataFrame, etc.).
+4.  **Agente Contextualizador:**
+    *   Recibe el resultado del Agente Ejecutor PandasAI.
+    *   Si es una ruta a un gráfico, prepara un mensaje simple.
+    *   Si son datos textuales o tabulares, los formatea de manera concisa y legible para el usuario (sin usar un LLM adicional para resumir, para mantener la precisión y eficiencia).
+5.  **Agente Validador:**
+    *   Revisa el resultado final (texto y/o la existencia de una ruta de gráfico) y cualquier error reportado por PandasAI.
+    *   Si se generó un gráfico, lee el archivo, lo codifica a Base64 y lo prepara para la respuesta. Elimina el archivo temporal del gráfico.
+    *   Si hubo un error en PandasAI, formatea un mensaje de error para el usuario.
+    *   Si la respuesta es textual, realiza una validación de coherencia (opcionalmente con un LLM sobre un snippet si la respuesta es muy larga) o la aprueba directamente.
+6.  **Entrega (FastAPI):** El endpoint ensambla la respuesta final (texto y/o imagen Base64, o error) en formato JSON y la devuelve.
 
-```bash
+```mermaid
 graph LR
-    A[Usuario] -- Consulta (NL) --> B(FastAPI Endpoint /api/query);
-    B -- Query --> C{Moderator Agent (Proxy)};
-    C -- Keywords/Intent --> D[Retrieval Agent];
-    D -- Embeddings --> E[(FAISS Vector DB)];
-    E -- Documentos Similares --> D;
-    D -- Documentos --> C;
-    C -- Documentos + Intent --> F[Contextualizer Agent];
-    F -- Datos Procesados --> G{Conditional: Visualizar?};
-    G -- No --> J[Validation Agent];
-    G -- Sí --> H[Python Agent];
-    H -- Código Python --> I[Code Executor & Visualizer];
-    I -- Imagen/Resultado Ejecución --> J;
-    F -- Resumen Textual --> J;
-    J -- Respuesta Preliminar --> K[Moderator Agent (Ensamblador)];
-    K -- Respuesta Final (Texto/Imagen) --> B;
+    A[Usuario/Servicio Externo] -- Consulta (NL) --> B(FastAPI Endpoint /api/query);
+    B -- original_query --> C[Agente Moderador];
+    C -- pandasai_query, intent --> D[Agente Ejecutor PandasAI];
+    D -- DataFrame CSV --> P((PandasAI Engine + LLM));
+    P -- Código Pandas Ejecutado --> D;
+    D -- pandasai_result (datos/ruta_plot), error? --> E[Agente Contextualizador];
+    E -- summary, ruta_plot?, error? --> F[Agente Validador];
+    F -- final_text, final_image_base64?, error_msg? --> B;
     B -- JSON Response --> A;
 ```
 
 ## 🛠️ Tecnologías Utilizadas
 
-Backend: FastAPI
+*   **Backend API:** FastAPI
+*   **Orquestación de Agentes:** LangChain, LangGraph
+*   **Análisis de Datos e IA Conversacional sobre Tablas:** PandasAI
+*   **Procesamiento de Datos Tabulares:** Pandas
+*   **Modelo Generativo (LLM):** Configurable (OpenAI GPT-4o/GPT-3.5-Turbo, Google Gemini). La selección se realiza vía variables de entorno.
+*   **Visualización (Generada por PandasAI):** Matplotlib/Seaborn (usadas internamente por PandasAI)
+*   **Lenguaje Principal:** Python 3.9+
+*   **Librerías Clave:** `langchain`, `langgraph`, `fastapi`, `uvicorn`, `pandasai`, `pandas`, `openai` (o `google-generativeai`), `python-dotenv`, `matplotlib`, `seaborn`.
+*   **Contenerización (Opcional):** Docker
 
-Orquestación de Agentes: LangChain, Langraph
+## 📂 Estructura del Proyecto (Simplificada)
 
-Base de Datos Vectorial: FAISS (Facebook AI Similarity Search)
-
-Modelo de Embeddings: sentence-transformers/all-MiniLM-L6-v2 (vía Hugging Face)
-
-Modelo Generativo (LLM): Google Gemini API (específicamente gemini-1.5-flash-latest o similar)
-
-Procesamiento y Ejecución de Código: Python 3.x
-
-Librerías Clave: langchain, langgraph, fastapi, uvicorn, faiss-cpu (o faiss-gpu), sentence-transformers, torch, pandas, matplotlib, seaborn, python-dotenv, google-generativeai
-
-Contenerización (Opcional): Docker
-
-
-```bash
-
-📂 Estructura del Proyecto
+```
 /tesis-multiagente-bi/
 ├── app/                      # Código fuente de la aplicación FastAPI
-│   ├── api/                  # Endpoints y Schemas Pydantic
-│   ├── agents/               # Lógica de cada agente
-│   ├── core/                 # Configuración, LLM, Embeddings
-│   ├── orchestration/        # Definición y construcción del grafo Langraph
-│   ├── vector_store/         # Lógica para cargar/interactuar con FAISS
-│   └── utils/                # Utilidades generales y ejecución segura de código
-│   └── main.py               # Entrypoint de FastAPI
-├── data/                     # Datos fuente (e.g., CSV)
-├── vector_store_index/       # Índice FAISS generado (.faiss, .pkl)
-├── notebooks/                # Jupyter notebooks (e.g., para crear el índice)
-├── tests/                    # Pruebas unitarias/integración
+│   ├── api/                  # Endpoints (endpoints.py) y Schemas Pydantic (schemas.py)
+│   ├── agents/               # Lógica de cada agente (moderator_agent.py, pandasai_agent.py, etc.)
+│   │   └── utils/            # (Si se necesitan utilidades compartidas por agentes)
+│   ├── core/                 # Configuración (config.py), LLM (llm.py), carga de DataFrame (dataframe_loader.py)
+│   ├── orchestration/        # Definición del grafo Langraph (graph_state.py, agent_nodes.py, graph_builder.py)
+│   └── main.py               # Entrypoint de FastAPI y lógica de inicio (lifespan)
+├── data/                     # Datos fuente (e.g., tu_archivo.csv)
+├── pandasai_charts/          # Directorio donde PandasAI guarda los gráficos generados temporalmente
+├── tests/                    # Pruebas (test_pandasai_queries.py para pruebas aisladas)
 ├── .env.example              # Ejemplo de variables de entorno
 ├── .gitignore
-├── Dockerfile                # Opcional
+├── Dockerfile                # (Opcional)
 ├── requirements.txt          # Dependencias Python
-└── README.md                 # Este archivo
-
+└── README.md                 # ¡Este archivo!
 ```
 
 ## 🚀 Cómo Empezar
-Prerrequisitos
 
-Python 3.9+
+### Prerrequisitos
 
-pip (gestor de paquetes de Python)
+*   Python 3.9+
+*   pip (gestor de paquetes de Python)
+*   Git
 
-Git
-
-
-1.Clonar el Repositorio
+### 1. Clonar el Repositorio (Si aplica)
 
 ```bash
-git clone < url-del-repositorio >
-
+git clone <url-del-repositorio>
 cd tesis-multiagente-bi
 ```
 
-2.Crear Entorno Virtual (Recomendado)
+### 2. Crear Entorno Virtual (Recomendado)
 
 ```bash
-python -m venv venv
-
-source venv/bin/activate  # En Windows:
-
-venv\Scripts\activate
+python -m venv env
+# En Windows:
+env\Scripts\activate
+# En Linux/macOS:
+# source env/bin/activate
 ```
 
-3.Instalar Dependencias
+### 3. Instalar Dependencias
 
 ```bash
 pip install -r requirements.txt
 ```
+Asegúrate de que `requirements.txt` incluya `pandasai`, `pandas`, y el conector LLM necesario (e.g., `openai` o `google-generativeai`).
 
-4.Configurar Variables de Entorno
+### 4. Configurar Variables de Entorno
 
-Copia el archivo de ejemplo y edítalo con tus credenciales:
-
+Copia `.env.example` a `.env` y edítalo:
 ```bash
-cp .env.example .env
-
+cp .env.example .env # o copy en Windows
 ```
-
-Abre el archivo .env y añade tu clave API de Google Gemini:
-
-```bash
+Abre `.env` y configura:
+```dotenv
 # .env
-GEMINI_API_KEY="TU_API_KEY_DE_GOOGLE_GEMINI"
-# Otras configuraciones si las hubiera (normalmente se definen en app/core/config.py)
+LLM_PROVIDER="openai" # O "google"
+
+# Si LLM_PROVIDER="openai"
+OPENAI_API_KEY="sk-tu_clave_api_de_openai"
+# OPENAI_MODEL_NAME="gpt-4o" # Opcional, se puede definir en config.py
+
+# Si LLM_PROVIDER="google"
+# GEMINI_API_KEY="tu_clave_api_de_google_gemini"
+# GEMINI_MODEL_NAME="gemini-1.5-flash-latest" # Opcional
+
+# Ruta a tu archivo de datos
+CSV_FILE_PATH="data/DataLimpia.csv" # ¡Asegúrate que esta ruta sea correcta!
 ```
 
-5.Construir la Base de Datos Vectorial FAISS
+### 5. Preparar Datos
+*   Coloca tu archivo CSV (ej. `DataLimpia.csv`) en la carpeta `data/`.
+*   Revisa la función de preprocesamiento en `app/core/dataframe_loader.py` y ajústala si es necesario para tus columnas de fecha y duración.
 
-Asegúrate de tener tus datos fuente (e.g., datos.csv) en la carpeta data/.
-
-Utiliza el notebook notebooks/1_build_vector_store.ipynb (o el script correspondiente) para procesar tus datos y generar el índice FAISS.
-
-Este proceso leerá el CSV, generará embeddings usando sentence-transformers/all-MiniLM-L6-v2 y guardará los archivos my_data_index.faiss y my_data_index.pkl (o los nombres que hayas definido).
-
-MUY IMPORTANTE: Copia los archivos .faiss y .pkl generados a la carpeta vector_store_index/ en la raíz del proyecto.
-
-6.Ejecutar la Aplicación FastAPI
+### 6. Ejecutar la Aplicación FastAPI
 
 ```bash
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8008
 ```
+*   La API estará disponible en `http://localhost:8008`.
+*   La documentación interactiva (Swagger UI) estará en `http://localhost:8008/docs`.
 
---reload: Reinicia el servidor automáticamente al detectar cambios en el código (útil para desarrollo).
+## ⚙️ Uso de la API
 
---host 0.0.0.0: Permite acceder al servidor desde otras máquinas en la red local.
+Interactúa con el sistema enviando peticiones `POST` al endpoint `/api/query`.
 
---port 8000: Especifica el puerto (puedes cambiarlo si es necesario).
+**Endpoint:** `POST /api/query`
 
-La API estará disponible en http://localhost:8000. Puedes ver la documentación interactiva (Swagger UI) en http://localhost:8000/docs.
-
-## ⚙️ Uso (API)
-
-Puedes interactuar con el sistema enviando peticiones POST al endpoint /api/query.
-
-Endpoint: POST /api/query
-
-Request Body (JSON):
-
+**Request Body (JSON):**
 ```json
 {
-  "query": "Muéstrame un gráfico de barras con la duración promedio de los viajes por tipo de barco."
+  "query": "Muéstrame un gráfico de barras de los 5 tipos de barco más comunes."
 }
 ```
-
 o
 ```json
 {
-  "query": "¿Cuál es el rol del capitán John Doe?"
+  "query": "Lista los nombres de los barcos que llegaron a La Habana en julio de 1851"
 }
 ```
 
-Ejemplo con curl:
+**Response Body (JSON):**
+La respuesta puede contener texto, una imagen codificada en Base64, o un error.
 
-```bash
-curl -X POST "http://localhost:8000/api/query" \
-     -H "Content-Type: application/json" \
-     -d '{"query": "Genera una gráfica de los puertos de salida más comunes"}'
+*   **Respuesta Textual:**
+    ```json
+    {
+      "text_response": "Se encontraron 41 barcos que salieron de Barcelona. Los primeros son: Duende, Dorotea, Moniquita, Silencio, Curra (... y 36 más).",
+      "image_response": null,
+      "error": null
+    }
+    ```
+*   **Respuesta Visual (Gráfico):**
+    ```json
+    {
+      "text_response": "Aquí tienes el gráfico solicitado:",
+      "image_response": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA...", // String Base64
+      "error": null
+    }
+    ```
+*   **Error:**
+    ```json
+    {
+      "text_response": null,
+      "image_response": null,
+      "error": "Lo siento, ocurrió un error al procesar: [Detalle del error de PandasAI o del sistema]"
+    }
+    ```
 
+## ✅ Pruebas Aisladas con PandasAI
+
+Para probar la interacción directa con PandasAI y tu CSV, puedes usar un script como `tests/test_pandasai_queries.py`:
+
+```py
+python tests/test_pandasai_queries.py
 ```
-
-
-Response Body (JSON):
-La respuesta contendrá un campo text_response y/o image_response (imagen codificada en base64), dependiendo de la consulta y la intención detectada.
-
-Respuesta Textual:
-```json
-{
-  "text_response": "El rol del capitán John Doe es supervisar la navegación y seguridad del buque.",
-  "image_response": null,
-  "error": null
-}
-```
-
-Respuesta Visual:
-```json
-{
-  "text_response": "Aquí tienes una gráfica mostrando los puertos de salida más comunes.",
-  "image_response": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAoAAAAHgCAY...", // String largo en base64
-  "error": null
-}
-```
-Error:
-```json
-{
-  "text_response": null,
-  "image_response": null,
-  "error": "Lo siento, ocurrió un error al procesar tu solicitud: [Detalle del error]"
-}
-```
-
-## ✅ Pruebas
-
-Para verificar rápidamente la carga y búsqueda en el índice FAISS (antes de ejecutar toda la aplicación), puedes usar el script de prueba:
-
-```bash
-python test/test_faiss_query.py #example
-```
-
-Este script cargará el índice desde vector_store_index/ y realizará una consulta de ejemplo, mostrando los resultados encontrados. Asegúrate de ajustar la consulta de prueba dentro del script para que sea relevante a tus datos.
-
-Las pruebas unitarias y de integración más completas se encuentran en el directorio tests/.
+Asegúrate de ajustar las consultas y la configuración dentro de ese script.
 
 ## 🤝 Contribuciones
 
-Este es un proyecto de tesis, pero las sugerencias y mejoras son bienvenidas. Por favor, abre un issue para discutir cambios importantes antes de realizar un pull request.
+Este es un proyecto de tesis. Las sugerencias para mejorar la robustez, eficiencia y capacidades son bienvenidas. Por favor, abre un *issue* para discutir cambios o mejoras.
 
-
-**Desarrollado como parte de un proyecto de tesis para optar por el titulo de Ingeniero en Ciencias Informáticas, por Daniel Rojas Grass en la Universidad de las Ciencias Informáticas.**
+---
+**Desarrollado como parte de un proyecto de tesis para optar por el título de Ingeniero en Ciencias Informáticas, por Daniel Rojas Grass en la Universidad de las Ciencias Informáticas (UCI).** 🎓

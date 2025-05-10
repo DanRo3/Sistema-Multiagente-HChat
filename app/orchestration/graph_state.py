@@ -1,37 +1,33 @@
 # app/orchestration/graph_state.py
 from typing import TypedDict, List, Optional, Dict, Any
-from langchain_core.documents import Document
+# Ya no necesitamos Document
 
 class GraphState(TypedDict):
     """
-    Define la estructura de datos compartida que fluye a través del grafo Langraph.
-    Cada campo representa una pieza de información que un agente puede necesitar
-    o producir.
+    Define la estructura de datos compartida para el flujo basado en PandasAI.
     """
-    # Entrada inicial
+    # --- Entrada Inicial ---
     original_query: str
 
-    # Salida del Moderador
-    intent: Optional[str]           # 'text', 'visual', 'code'
-    filters: Optional[Dict[str, Any]] # Filtros para metadatos (o None)
-    search_query: Optional[str]     # Consulta optimizada para búsqueda vectorial
+    # --- Salida del Moderador ---
+    intent: Optional[str]             # 'text', 'visual', 'code'
+    pandasai_query: Optional[str]     # La consulta directa para PandasAI
 
-    # Salida del Recuperador
-    retrieved_docs: Optional[List[Document]] # Lista de documentos recuperados
+    # --- Salida del Ejecutor PandasAI ---
+    # Resultado principal si NO es un gráfico guardado en archivo
+    pandasai_result: Optional[Any] = None
+    # Tipo del resultado principal ('string', 'dataframe_list', 'number', etc.)
+    pandasai_result_type: Optional[str] = None
+    # Ruta al archivo PNG si PandasAI guardó un gráfico en disco
+    pandasai_plot_path: Optional[str] = None
+    # Error específico de la ejecución de PandasAI
+    pandasai_error: Optional[str] = None
 
-    # Salida del Contextualizador
-    summary: Optional[str]          # Resumen textual o explicación
-    needs_visualization: bool = False # Flag para activar la rama de código/visualización
-    data_for_python: Optional[Any]  # Datos preparados para el agente Python (str o dict/list)
+    # --- Salida del Contextualizador ---
+    # Texto acompañante generado por el contextualizador
+    summary: Optional[str] = None
 
-    # Salida del Agente Python
-    python_code: Optional[str]      # Código Python generado
-
-    # Salida del Ejecutor de Código
-    execution_output: Optional[str] # Resultado de la ejecución (stdout o base64 de imagen)
-    execution_error: Optional[str]  # Mensaje de error si la ejecución falló
-
-    # Salida del Validador (Respuesta final para el usuario)
-    final_response_text: Optional[str]  # Texto final validado
-    final_response_image: Optional[str] # Base64 de imagen final validada
-    error_message: Optional[str]        # Mensaje de error final para el usuario
+    # --- Salida del Validador (Respuesta final) ---
+    final_response_text: Optional[str] = None
+    final_response_image: Optional[str] = None # Contendrá el string Base64 Data URI
+    error_message: Optional[str] = None
