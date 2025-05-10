@@ -1,127 +1,166 @@
 import json
 import re
+import logging
 from typing import Dict, Optional, Any
 from app.core.llm import get_llm
-from langchain_core.prompts import ChatPromptTemplate 
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.messages import SystemMessage, HumanMessage
 
-# Definición del prompt para el agente moderador
-MODERATOR_PROMPT = """**Tarea:** Analiza la consulta del usuario y extrae información estructurada para guiar la búsqueda y respuesta en un sistema de consulta de registros marítimos históricos.
+logger = logging.getLogger(__name__)
 
-    **Consulta del Usuario:**
-    "{{query}}"
+# --- Prompt Mejorado para Enrutamiento ---
 
-    **Contexto de Datos:** La base de datos contiene registros sobre viajes marítimos con las siguientes columnas de metadatos relevantes para filtrar: `publication_date`, `news_section`, `travel_departure_date`, `travel_duration`, `travel_arrival_date`, `travel_departure_port`, `travel_port_of_call_list`, `travel_arrival_port`, `ship_type`, `ship_name`, `cargo_list`, `master_role`, `master_name`. La columna `parsed_text` contiene el texto completo para búsqueda vectorial.
+SYSTEM_INSTRUCTIONS = """**Tarea:** Eres un asistente experto en traducir consultas de usuarios sobre registros históricos marítimos a una `pandasai_query` clara y una `intent`. La `pandasai_query` será ejecutada por PandasAI. **El DataFrame estará disponible en el código generado por PandasAI bajo el nombre `df`**.
 
-    **Instrucciones Detalladas:**
-    1.  **Determina la Intención Principal (`intent`):** Clasifica como 'visual' si pide gráficos/tablas/visualizaciones, 'code' si pide código Python explícitamente, o 'text' en los demás casos.
-    2.  **Identifica Filtros de Metadatos (`filters`):** Busca valores específicos en la consulta que coincidan con las columnas de metadatos listadas. Devuelve un diccionario Python con `{columna: valor}` o `null` si no hay filtros. NO inventes filtros.
-    3.  **Crea una Consulta de Búsqueda Vectorial (`search_query`):** Formula una consulta concisa con palabras clave y entidades (nombres, lugares, barcos, acciones) de la consulta original para la búsqueda vectorial en `parsed_text`.
+**Contexto de Datos:** El DataFrame (`df`) contiene registros con columnas: `publication_date` (datetime), `news_section`, `travel_departure_date` (datetime), `travel_duration` (texto), `travel_arrival_date` (datetime), `travel_departure_port`, `travel_port_of_call_list`, `travel_arrival_port`, `ship_type`, `ship_name`, `cargo_list`, `master_role`, `master_name`, `parsed_text`, `travel_duration_days` (float).
 
-    **Formato de Salida Requerido:** Responde **estrictamente y únicamente** con un objeto JSON válido con las claves "intent" (string: 'text', 'visual' o 'code'), "filters" (dict o null), y "search_query" (string). No incluyas texto fuera del JSON.
+**Instrucciones Detalladas:**
+1.  **Determina la Intención Final (`intent`):** Clasifica la *solicitud original del usuario* como 'visual' si pide explícitamente un gráfico/tabla/plot, o 'text' en los demás casos.
+2.  **Formula la Consulta para PandasAI (`pandasai_query`):**
+    *   Reformula la consulta original del usuario en una instrucción clara y directa para PandasAI, **asegurándote de que las operaciones de Pandas se realicen sobre la variable `df`**.
+    *   Si el usuario pide datos específicos: "Filtra df donde [...] y devuelve un DataFrame con [...]".
+    *   Si pide un cálculo: "Calcula el promedio de df['columna'] donde [...] y devuelve solo el número."
+    *   Si pide un gráfico: "Genera un gráfico de barras de df[...] y guárdalo."
+    *   Si la consulta es sobre `parsed_text`: "Devuelve un DataFrame con columnas [...] de df donde df['parsed_text'] contenga 'palabra'."
 
-    **Ejemplo de Salida JSON:**
-    ```json
-    {{
-    "intent": "text",
-    "filters": {{
-        "master_name": "Litlejohn"
-    }},
-    "search_query": "fragata Charles Edwin capitán Litlejohn"
-    }}
-    Tu Análisis (Solo JSON):
+**Formato de Salida Requerido:** Responde **únicamente** con un objeto JSON válido con las claves: "intent" (string: 'text' o 'visual') y "pandasai_query" (string).
+
+
+**Ejemplo Salida 1 (Pide Datos):**
+```json
+{{
+  "intent": "text",
+  "pandasai_query": "Filtra df para encontrar registros donde df['master_name'] sea 'Smith' y df['travel_departure_port'] sea 'Nueva York', luego devuelve un DataFrame con las columnas 'ship_name' y 'publication_date' de esos registros."
+}}
+```
+
+**Ejemplo Salida 2 (Pide Conteo):**
+
+```
+{{
+  "intent": "text",
+  "pandasai_query": "Cuenta el número de barcos únicos (ship_name) que llegaron al puerto de 'La Habana' en 1855 y devuelve solo el número."
+}}
+```
+
+**Ejemplo Salida 3 (Pide Gráfico):**
+
+```
+{{
+  "intent": "visual",
+  "pandasai_query": "Genera un gráfico de barras mostrando la frecuencia de los 5 puertos de salida (travel_departure_port) más comunes, intenta usar diferentes colores en las graficas y guárdalo."
+}}
+```
+**Ejemplo Salida 4 (Busca en Texto y pide columnas específicas):**
+
+{{
+  "intent": "text",
+  "pandasai_query": "Devuelve un DataFrame con las columnas 'ship_name' y 'parsed_text' de df donde la columna df['parsed_text'] contenga la palabra 'tormenta'."
+}}
 """
 
-# Crear la plantilla de prompt
-prompt_template = ChatPromptTemplate.from_template(MODERATOR_PROMPT)
+HUMAN_TASK_PREFIX = """**Consulta del Usuario:**
+"{query}"
+
+**Tu Análisis (Solo JSON):**
+"""
+
+# Crear plantilla (usando from_messages para robustez)
+prompt_template = None
+try:
+    base_template = ChatPromptTemplate.from_messages([
+        ("system", SYSTEM_INSTRUCTIONS),
+        ("human", HUMAN_TASK_PREFIX)
+    ])
+    base_template.input_variables = ["query"]
+    prompt_template = base_template
+    logger.info("Plantilla de prompt del Moderador creada.")
+except Exception as e:
+    logger.exception(f"Error CRÍTICO al crear ChatPromptTemplate para Moderador: {e}.")
 
 def analyze_query(query: str) -> Dict[str, Any]:
     """
-    Analiza la consulta del usuario usando el LLM para determinar
-    la intención, extraer filtros de metadatos y generar una consulta
-    optimizada para la búsqueda vectorial.
-
-    Args:
-        query: La consulta original del usuario en lenguaje natural.
-
-    Returns:
-        Un diccionario con las claves:
-        - 'intent': 'text', 'visual', o 'code'.
-        - 'filters': Un diccionario con los filtros de metadatos o None.
-        - 'search_query': La cadena de texto optimizada para búsqueda vectorial.
-        En caso de error, devuelve un diccionario de fallback.
+    Analiza la consulta, determina la intención final, y genera
+    la consulta optimizada para PandasAI.
     """
-    print(f"Moderador: Iniciando análisis para query: '{query}'")
+    logger.info(f"Moderador: Iniciando análisis para query: '{query}'")
 
-    # Obtener la instancia del LLM (configurado con baja temperatura para precisión)
+    if prompt_template is None:
+         logger.error("Plantilla de prompt del Moderador inválida. Usando fallback.")
+         return {"intent": "text", "pandasai_query": query}
+
     llm = get_llm()
     if not llm:
-        print("Error Crítico: LLM no disponible para el agente moderador.")
-        return {"intent": "text", "filters": None, "search_query": query}
+        logger.error("Error Crítico: LLM no disponible para el agente moderador.")
+        return {"intent": "text", "pandasai_query": query}
 
-    # Crear la cadena (chain) LangChain uniendo el prompt y el LLM
     chain = prompt_template | llm
 
     try:
-        # Invocar la cadena con la consulta del usuario
+        logger.debug("Invocando cadena del moderador...")
         response = chain.invoke({"query": query})
-        content = response.content  # Contenido de la respuesta del LLM
+        content = response.content
+        logger.info(f"Moderador: Respuesta cruda del LLM (primeros 500 chars):\n---\n{content[:500]}\n---")
 
-        print(f"Moderador: Respuesta cruda del LLM recibida:\n---\n{content}\n---")
-
-        # --- Extracción robusta del JSON ---
         json_str = extract_json(content)
         if json_str is None:
-            return {"intent": "text", "filters": None, "search_query": query}
+            logger.error("No se pudo extraer JSON de la respuesta del LLM moderador.")
+            return {"intent": "text", "pandasai_query": query}
 
-        # Parsear el string JSON extraído
+        logger.debug(f"Moderador: String JSON a parsear:\n---\n{repr(json_str)}\n---")
         parsed_response = json.loads(json_str)
-
-        # --- Validación y Limpieza de la Respuesta Parseada ---
-        return validate_parsed_response(parsed_response, query)
+        validated_response = validate_parsed_pandasai_response(parsed_response, query)
+        logger.info(f"Moderador: Análisis finalizado: {validated_response}")
+        return validated_response
 
     except json.JSONDecodeError as e:
-        print(f"Error Crítico: Fallo al parsear JSON de la respuesta del LLM: {e}")
-        return {"intent": "text", "filters": None, "search_query": query}
-
+        logger.error(f"Error Crítico: Fallo al parsear JSON: {e}")
+        logger.error(f"Respuesta LLM que causó el error:\n{content}")
+        return {"intent": "text", "pandasai_query": query}
+    except ValueError as e:
+        logger.error(f"Error durante la validación de la respuesta parseada: {e}")
+        return {"intent": "text", "pandasai_query": query}
     except Exception as e:
-        print(f"Error Inesperado en el agente moderador: {e}")
-        import traceback
-        traceback.print_exc()
-        return {"intent": "text", "filters": None, "search_query": query}
+        logger.exception(f"Error Inesperado en el agente moderador: {e}")
+        return {"intent": "text", "pandasai_query": query}
 
 def extract_json(content: str) -> Optional[str]:
-    """Extrae el bloque JSON de la respuesta del LLM."""
-    json_match = re.search(r"```json\s*(\{[\s\S]*?\})\s*```", content, re.DOTALL)
-    if json_match:
-        return json_match.group(1).strip()
-    json_match_loose = re.search(r"(\{[\s\S]*?\})", content, re.DOTALL)
-    if json_match_loose:
-        return json_match_loose.group(1).strip()
+    """Extrae el primer bloque JSON ```json ... ``` o el primer objeto JSON { ... }."""
+    json_block_match = re.search(r"```json\s*(\{[\s\S]+?\})\s*```", content, re.DOTALL)
+    if json_block_match:
+        extracted = json_block_match.group(1).strip()
+        logger.debug(f"JSON extraído (```json): {extracted[:100]}...")
+        return extracted
+    stripped_content = content.strip()
+    # Buscar un JSON que ocupe toda la línea o esté indentado
+    json_object_match = re.search(r"^\s*(\{[\s\S]*?\})\s*$", stripped_content, re.MULTILINE)
+    if json_object_match:
+        logger.debug("Respuesta parece ser solo un objeto JSON.")
+        return json_object_match.group(1).strip()
+    logger.warning("No se encontró un bloque JSON reconocible en la respuesta.")
     return None
 
-def validate_parsed_response(parsed_response: Dict[str, Any], query: str) -> Dict[str, Any]:
-    """Valida y limpia la respuesta parseada."""
-    required_keys = ["intent", "filters", "search_query"]
+def validate_parsed_pandasai_response(parsed_response: Dict[str, Any], original_query: str) -> Dict[str, Any]:
+    """Valida la respuesta JSON parseada del LLM moderador (versión PandasAI)."""
+    required_keys = ["intent", "pandasai_query"]
     if not all(k in parsed_response for k in required_keys):
-        print("Error: Respuesta JSON del LLM incompleta. Faltan claves.")
-        raise ValueError("Respuesta JSON del LLM no tiene la estructura esperada.")
+        missing_keys = [k for k in required_keys if k not in parsed_response]
+        logger.error(f"Respuesta JSON incompleta. Faltan: {missing_keys}. Recibido: {parsed_response.keys()}")
+        raise ValueError("Respuesta JSON del moderador incompleta.")
 
-    valid_intents = ["text", "visual", "code"]
-    if parsed_response["intent"] not in valid_intents:
-        print(f"Advertencia: Intención inválida '{parsed_response['intent']}' recibida del LLM. Usando 'text' por defecto.")
+    valid_intents = ["text", "visual", "code"] # Mantener 'code' por si acaso
+    intent = parsed_response.get("intent")
+    if intent not in valid_intents:
+        logger.warning(f"Intención inválida '{intent}'. Usando 'text'.")
         parsed_response["intent"] = "text"
 
-    filters_value = parsed_response["filters"]
-    if filters_value is not None:
-        if not isinstance(filters_value, dict):
-            print(f"Advertencia: 'filters' no es un diccionario ({type(filters_value)}). Se establecerá a None.")
-            parsed_response["filters"] = None
-        elif not filters_value:
-            parsed_response["filters"] = None
+    pandasai_query = parsed_response.get("pandasai_query")
+    if not isinstance(pandasai_query, str) or not pandasai_query.strip():
+        logger.warning(f"'pandasai_query' inválido o vacío. Usando original.")
+        parsed_response["pandasai_query"] = original_query
 
-    if not isinstance(parsed_response.get("search_query"), str):
-        print(f"Advertencia: 'search_query' no es un string. Usando la query original.")
-        parsed_response["search_query"] = query
+    # Añadir claves faltantes con None para consistencia del estado
+    parsed_response.setdefault("filters", None) # Ya no lo generamos pero lo mantenemos None
+    parsed_response.setdefault("search_query", None) # Ya no lo generamos
 
-    print(f"Moderador: Análisis finalizado y validado: {parsed_response}")
     return parsed_response

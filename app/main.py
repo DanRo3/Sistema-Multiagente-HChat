@@ -9,6 +9,7 @@ from app.core.embeddings import initialize_embeddings_model
 from app.vector_store.faiss_store import load_faiss_index
 from app.orchestration.graph_builder import get_compiled_graph
 from app.api.endpoints import router as api_router
+from app.core.dataframe_loader import load_and_preprocess_dataframe
 
 # Configurar logging básico para la aplicación
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -42,8 +43,19 @@ async def lifespan(app: FastAPI):
     if faiss_db is None:
         logger.warning("No se pudo cargar el índice FAISS.")
 
+    # 4. Cargar el DataFrame de Pandas
+    logger.info("Cargando y preprocesando DataFrame de Pandas...")
+    dataframe = load_and_preprocess_dataframe()
+    if dataframe is None:
+         logger.error("Fallo crítico al cargar el DataFrame principal.")
+         # Decide si la app puede funcionar sin él
+         raise RuntimeError("No se pudo cargar el DataFrame de datos.")
+    else:
+         # Opcional: Almacenar en app.state si otros componentes lo necesitan directamente
+         # app.state.dataframe = dataframe
+         logger.info("DataFrame cargado en memoria.")
 
-    # 4. Compilar el Grafo Langraph y Almacenarlo
+    # 5. Compilar el Grafo Langraph y Almacenarlo
     logger.info("Compilando grafo Langraph...")
     try:
         compiled_graph = get_compiled_graph()

@@ -1,109 +1,76 @@
 # app/orchestration/agent_nodes.py
-
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from app.orchestration.graph_state import GraphState
+import logging
 
 # Importar las funciones lógicas de cada agente
 from app.agents import moderator_agent
-from app.agents import retrieval_agent
 from app.agents import contextualizer_agent
-from app.agents import python_agent
-from app.utils import code_executor # El ejecutor está en utils
+from app.agents import pandasai_agent # Agente PandasAI
 from app.agents import validation_agent
 
-# --- Funciones Nodo para Langraph ---
+logger_nodes = logging.getLogger(__name__)
 
+# --- Funciones Nodo para Langraph---
+# --- NODO EJECUTOR MODERADOR ---
 def run_moderator(state: GraphState) -> Dict[str, Any]:
-    """Nodo que ejecuta el agente moderador."""
-    print("--- Ejecutando Nodo: Moderador ---")
+    """Nodo que ejecuta el agente moderador (versión PandasAI-only)."""
+    logger_nodes.info("--- Ejecutando Nodo: Moderador ---")
     query = state['original_query']
-    # Llama a la lógica del agente moderador
     analysis_result = moderator_agent.analyze_query(query)
-    print(f"Resultado Moderador: {analysis_result}")
-    # Devuelve solo los campos del estado que este agente modifica
+    logger_nodes.info(f"Resultado Moderador (PandasAI-only): {analysis_result}")
     return {
         "intent": analysis_result.get("intent"),
-        "filters": analysis_result.get("filters"),
-        "search_query": analysis_result.get("search_query")
+        "pandasai_query": analysis_result.get("pandasai_query")
     }
 
-def run_retriever(state: GraphState) -> Dict[str, Any]:
-    """Nodo que ejecuta el agente de recuperación."""
-    print("--- Ejecutando Nodo: Recuperador ---")
-    search_query = state.get('search_query')
-    filters = state.get('filters')
-    # Llama a la lógica del agente recuperador
-    retrieved_docs = retrieval_agent.retrieve(search_query, filters)
-    print(f"Documentos recuperados: {len(retrieved_docs)}")
-    # Devuelve solo los campos que modifica
-    return {"retrieved_docs": retrieved_docs}
+# --- NODO EJECUTOR PANDASAI ---
+def run_pandasai_executor(state: GraphState) -> Dict[str, Any]:
+    """Nodo que ejecuta la consulta usando PandasAI y devuelve el diccionario de resultados."""
+    logger_nodes.info("--- Ejecutando Nodo: Ejecutor PandasAI ---")
+    query_to_run = state.get('pandasai_query')
 
+    if not query_to_run:
+         logger_nodes.error("No se encontró consulta PandasAI para ejecutar.")
+         # Devolver diccionario de error consistente con la salida de run_pandasai
+         return {"pandasai_result": None, "pandasai_result_type": None, "pandasai_plot_path": None, "pandasai_error": "Consulta PandasAI vacía."}
+
+    # Llama a la lógica del agente PandasAI, que devuelve un diccionario
+    pandasai_output_dict = pandasai_agent.run_pandasai(query_to_run)
+    logger_nodes.info(f"Resultado PandasAI Ejecutor: { {k: (type(v) if k=='pandasai_result' else v) for k, v in pandasai_output_dict.items()} }")
+
+    # Devuelve el diccionario COMPLETO para actualizar el estado
+    return pandasai_output_dict
+
+# --- NODO EJECUTOR cONTEXTUALIZADOR ---
 def run_contextualizer(state: GraphState) -> Dict[str, Any]:
-    """Nodo que ejecuta el agente contextualizador."""
-    print("--- Ejecutando Nodo: Contextualizador ---")
-    original_query = state['original_query']
-    intent = state.get('intent')
-    retrieved_docs = state.get('retrieved_docs')
-    # Llama a la lógica del agente contextualizador
-    context_result = contextualizer_agent.contextualize(original_query, intent, retrieved_docs)
-    print(f"Resultado Contextualizador: summary='{context_result.get('summary', '')[:50]}...', needs_viz={context_result.get('needs_visualization')}")
-    # Devuelve los campos modificados
-    return {
-        "summary": context_result.get("summary"),
-        "needs_visualization": context_result.get("needs_visualization", False),
-        "data_for_python": context_result.get("data_for_python")
-    }
+    """Nodo que ejecuta el agente contextualizador (simplificado)."""
+    logger_nodes.info("--- Ejecutando Nodo: Contextualizador ---")
+    # Pasa el estado completo
+    context_result = contextualizer_agent.contextualize(state)
+    logger_nodes.info(f"Resultado Contextualizador: summary='{context_result.get('summary', '')[:50]}...'")
+    # Devuelve solo los campos que modifica
+    return {"summary": context_result.get("summary")}
 
-def run_python_agent(state: GraphState) -> Dict[str, Any]:
-    """Nodo que ejecuta el agente generador de código Python."""
-    print("--- Ejecutando Nodo: Agente Python (Generador Código) ---")
-    original_query = state['original_query']
-    data_for_python = state.get('data_for_python')
-    # Llama a la lógica del agente Python
-    code_result = python_agent.generate_python_code(original_query, data_for_python)
-    print(f"Resultado Agente Python: Código generado -> {'Sí' if code_result.get('python_code') else 'No'}")
-    # Devuelve el campo modificado
-    return {"python_code": code_result.get("python_code")}
-
-def run_code_executor(state: GraphState) -> Dict[str, Any]:
-    """Nodo que ejecuta el código Python generado."""
-    print("--- Ejecutando Nodo: Ejecutor de Código ---")
-    python_code = state.get('python_code')
-    # Llama a la utilidad de ejecución segura
-    output, error = code_executor.execute_python_safely(python_code)
-    print(f"Resultado Ejecutor: Output -> {'Presente' if output else 'Ausente'}, Error -> {'Presente' if error else 'Ausente'}")
-    # Devuelve los campos modificados
-    return {"execution_output": output, "execution_error": error}
-
+# --- NODO EJECUTOR VALIDADOR ---
 def run_validator(state: GraphState) -> Dict[str, Any]:
-    """Nodo que ejecuta el agente de validación final."""
-    print("--- Ejecutando Nodo: Validador ---")
+    logger_nodes.info("--- Ejecutando Nodo: Validador ---")
     original_query = state['original_query']
-    execution_error = state.get('execution_error')
+    summary = state.get('summary')
+    plot_path = state.get('pandasai_plot_path') # Nombre correcto del estado
+    pandasai_error = state.get('pandasai_error')
 
-    # Determinar qué contenido validar basado en el flujo
-    if state.get('needs_visualization') and not execution_error:
-        # Si se intentó visualizar y no hubo error de ejecución, validar la salida del ejecutor
-        content_to_validate = state.get('execution_output')
-        print("Validando salida del ejecutor de código...")
-    elif execution_error:
-         # Si hubo error de ejecución, pasarlo para que el validador lo formatee
-         content_to_validate = None # No hay contenido válido que validar
-         print(f"Pasando error de ejecución al validador: {execution_error}")
-    else:
-        # Si no se necesitaba visualización o falló antes, validar el resumen del contextualizador
-        content_to_validate = state.get('summary')
-        print("Validando resumen del contextualizador...")
+    # content_to_validate ya no es necesario pasarlo explícitamente aquí,
+    # la lógica de validation_agent.validate usará 'summary' si no hay plot/error.
 
-
-    # Llama a la lógica del agente validador
     final_text, final_image, error_msg = validation_agent.validate(
-        original_query,
-        content_to_validate,
-        execution_error # Pasa el error de ejecución explícitamente
+        original_query=original_query,
+        summary_from_contextualizer=summary, # Pasa el summary
+        pandasai_error=pandasai_error,         # Pasa el error de PandasAI
+        plot_path_from_pandasai=plot_path    # Pasa la ruta del plot
     )
-    print(f"Resultado Validador: Texto -> {'Sí' if final_text else 'No'}, Imagen -> {'Sí' if final_image else 'No'}, Error -> {'Sí' if error_msg else 'No'}")
-    # Devuelve los campos finales que se usarán en la respuesta API
+
+    logger_nodes.info(f"Resultado Validador: Texto={final_text is not None}, Imagen={final_image is not None}, Error={error_msg is not None}")
     return {
         "final_response_text": final_text,
         "final_response_image": final_image,

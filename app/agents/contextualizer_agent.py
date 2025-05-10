@@ -1,251 +1,134 @@
+# app/agents/contextualizer_agent.py
 import json
-import re
-from typing import Dict, List, Optional, Any
-from app.core.llm import get_llm # Importa la función para obtener el LLM
-from langchain_core.documents import Document # Para type hinting
-from langchain_core.prompts import ChatPromptTemplate # Para las plantillas de prompt
+import logging
+from typing import Dict, Any, Optional, List # Asegurar que List esté aquí
 
-# --- Plantilla para Resumen Textual ---
-TEXT_SUMMARY_PROMPT = """
-    **Tarea:** Basándote **únicamente** en los siguientes documentos recuperados de registros marítimos, genera una respuesta concisa y directa a la consulta original del usuario.
+logger = logging.getLogger(__name__)
 
-    **Consulta Original del Usuario:**
-    "{query}"
+# Ya NO necesitamos LLM ni plantillas de prompt en este agente
+# para el flujo simplificado de PandasAI.
 
-    **Documentos Recuperados (Contenido y Metadatos Clave):**
-
-
-    {documents_summary}
-
-    **Instrucciones:**
-    - Sintetiza la información clave de los documentos que responde **directamente** a la consulta.
-    - Si varios documentos contienen información relevante, intenta combinarlos coherentemente.
-    - Si los documentos recuperados **no contienen** información para responder la consulta, indica claramente que no se encontró información específica sobre ese tema en los registros consultados. Ejemplo: "Lo siento, no encontré información sobre [tema específico] en los documentos recuperados."
-    - **No inventes información** que no esté explícitamente en los documentos proporcionados.
-    - Sé breve y ve al punto.
-    - Responde directamente con el resumen o la indicación de que no se encontró información. No añadas frases introductorias como "Basado en los documentos..." a menos que sea necesario para la claridad.
-
-    **Resumen Conciso:**
-"""
-
-# --- Plantilla para Análisis de Visualización ---
-VISUAL_ANALYSIS_PROMPT = """
-    **Tarea:** Evalúa si los documentos recuperados contienen datos suficientes y apropiados para generar la visualización solicitada por el usuario. Si es viable, extrae y formatea los datos relevantes.
-
-    **Consulta Original del Usuario (solicitando visualización):**
-    "{query}"
-
-    **Documentos Recuperados (Contenido y Metadatos Clave):**
-
-    {documents_summary}
-
-    **Instrucciones Detalladas:**
-    1.  **Evalúa Viabilidad (`visualization_possible`):**
-        *   Analiza la **consulta** del usuario: ¿Qué tipo de gráfico pide (barras, líneas, etc.)? ¿Qué variables necesita (puertos, duraciones, tipos de barco, fechas, cantidades)?
-        *   Analiza los **documentos**: ¿Contienen las variables necesarias mencionadas en la consulta? ¿Hay suficientes datos (al menos 3-5 puntos de datos relevantes suelen ser necesarios para un gráfico simple)? ¿Los datos son consistentes y del tipo correcto (números para agregaciones, categorías para ejes)?
-        *   Decide si la visualización es razonablemente posible (`true`) o no (`false`).
-    2.  **Extrae Datos si es Viable (`data_for_python`):**
-        *   Si `visualization_possible` es `true`, extrae los **datos exactos** necesarios de los documentos recuperados.
-        *   Formatea estos datos como una **lista de diccionarios Python**. Cada diccionario representa una fila o punto de datos, y las claves deben ser nombres descriptivos y consistentes para las columnas que el agente Python usará (e.g., 'puerto_salida', 'frecuencia', 'tipo_barco', 'duracion_dias').
-        *   Asegúrate de que los valores numéricos sean números (int/float) si es posible, y los textos sean strings.
-        *   Devuelve esta lista de diccionarios **como un string** (usando `json.dumps` o similar internamente antes de ponerlo en el JSON de respuesta).
-        *   Si `visualization_possible` es `false`, el valor de `data_for_python` debe ser `null`.
-    3.  **Genera una Explicación (`explanation`):**
-        *   Si `visualization_possible` es `true`, escribe una breve frase indicando que los datos están listos para generar la gráfica solicitada. Ejemplo: "Datos extraídos para generar gráfico de barras de frecuencia de puertos de salida."
-        *   Si `visualization_possible` es `false`, explica **por qué** no es posible (datos insuficientes, variables faltantes, tipo de gráfico no adecuado para los datos, etc.). Ejemplo: "No se encontraron suficientes registros con información sobre la duración del viaje para el tipo de barco especificado para crear un gráfico de tendencias."
-
-    **Formato de Salida Requerido:** Responde **estrictamente y únicamente** con un objeto JSON válido que contenga las claves: "visualization_possible" (boolean), "data_for_python" (string que representa una lista de dicts, o null), y "explanation" (string).
-
-    Tu Análisis (Solo JSON):
-"""
-
-
-text_summary_template = ChatPromptTemplate.from_template(TEXT_SUMMARY_PROMPT)
-visual_analysis_template = ChatPromptTemplate.from_template(VISUAL_ANALYSIS_PROMPT)
-
-def format_docs_for_llm(docs: List[Document], max_docs: int = 20, max_len_per_doc: int = 500) -> str:
+def format_pandasai_data_for_summary(
+    pandasai_result: Optional[Any],
+    pandasai_result_type: Optional[str],
+    original_query: str # Podríamos usarla para un encabezado
+) -> Optional[str]:
     """
-    Formatea una lista de documentos de forma concisa para incluirla en el prompt del LLM.
-    Extrae metadatos clave y limita la longitud del texto.
+    Formatea el resultado de PandasAI (si no es un plot o error)
+    en un string legible para el usuario final, sin usar un LLM.
     """
-    if not docs:
-        return "No se recuperaron documentos relevantes."
+    if pandasai_result is None and pandasai_result_type is None:
+        return "No se obtuvo un resultado específico del análisis de datos."
 
-    summary_parts = []
-    # Priorizar metadatos potencialmente útiles
-    relevant_metadata_keys = [
-        'publication_date', 'travel_departure_date', 'travel_duration',
-        'travel_arrival_date', 'travel_departure_port', 'travel_arrival_port',
-        'ship_type', 'ship_name', 'cargo_list', 'master_name'
-    ]
+    if pandasai_result_type == "dataframe_list":
+        if not isinstance(pandasai_result, list):
+            logger.warning(f"Contextualizador: Se esperaba lista para dataframe_list, se obtuvo {type(pandasai_result)}")
+            return "Se recibieron datos tabulares, pero en un formato inesperado."
 
-    for i, doc in enumerate(docs[:max_docs]):
-        # Extraer metadatos relevantes
-        meta_dict = {k: doc.metadata.get(k) for k in relevant_metadata_keys if doc.metadata.get(k)}
-        meta_str = json.dumps(meta_dict, ensure_ascii=False) # JSON compacto
+        num_rows = len(pandasai_result)
+        if num_rows == 0:
+            return "No se encontraron registros que coincidan con tu consulta."
 
-        # Limitar longitud del texto principal
-        content_preview = doc.page_content[:max_len_per_doc]
-        if len(doc.page_content) > max_len_per_doc:
-            content_preview += "..."
-            summary_parts.append(f"Doc {i+1} Metadata: {meta_str}\nDoc {i+1} Texto: {content_preview}\n---")
+        # Extraer nombres de columna de la primera fila (si existe)
+        # columns = list(pandasai_result[0].keys()) if num_rows > 0 and pandasai_result[0] else []
 
-        if len(docs) > max_docs:
-            summary_parts.append(f"(... y {len(docs) - max_docs} documentos más recuperados pero no mostrados para brevedad)")
+        # Caso especial: si la consulta pedía explícitamente una lista de algo (ej. nombres de barcos)
+        # y el resultado es una lista de diccionarios con una sola clave.
+        is_simple_list_output = False
+        single_key = None
+        if num_rows > 0 and isinstance(pandasai_result[0], dict) and len(pandasai_result[0]) == 1:
+            single_key = list(pandasai_result[0].keys())[0]
+            # Verificar si todos los dicts tienen solo esa clave
+            if all(isinstance(item, dict) and len(item) == 1 and single_key in item for item in pandasai_result):
+                is_simple_list_output = True
 
-        return "\n".join(summary_parts)
-
-
-def contextualize(original_query: str, intent: str, retrieved_docs: List[Document]) -> Dict[str, Any]:
-    """
-    Contextualiza la respuesta basada en la intención y los documentos recuperados.
-
-    Args:
-        original_query: La consulta original del usuario.
-        intent: La intención detectada ('text', 'visual', 'code').
-        retrieved_docs: Lista de documentos recuperados por el agente anterior.
-
-    Returns:
-        Un diccionario con las claves:
-        - 'summary' (str): El resumen textual o la explicación.
-        - 'needs_visualization' (bool): True si se debe proceder a generar código.
-        - 'data_for_python' (Optional[str]): String representando lista de dicts
-                                            para el agente Python, o None.
-    """
-    print(f"Contextualizador: Iniciando. Intención='{intent}'. Documentos Recibidos={len(retrieved_docs)}")
-
-    # Si no hay documentos, no se puede hacer nada más
-    if not retrieved_docs:
-        print("Contextualizador: No hay documentos para contextualizar.")
-        return {"summary": "Lo siento, no encontré información relevante para tu consulta en los registros.",
-                "needs_visualization": False,
-                "data_for_python": None}
-
-    # Obtener el LLM (usar temperatura baja para tareas estructuradas/resúmenes)
-    llm = get_llm()
-    if not llm:
-        print("Error Crítico: LLM no disponible para el agente contextualizador.")
-        return {"summary": "Error interno: No se pudo procesar la solicitud en este momento.",
-                "needs_visualization": False,
-                "data_for_python": None}
-
-    # Formatear los documentos para pasarlos al LLM de forma eficiente
-    docs_summary_for_prompt = format_docs_for_llm(retrieved_docs)
-
-    # --- Lógica basada en la Intención ---
-
-    if intent == 'text' or intent == 'code': # Tratar 'code' como 'text' por ahora, la validación se encargará
-        print("Contextualizador: Intención es 'text' o 'code'. Generando resumen textual...")
-        chain = text_summary_template | llm
-        try:
-            response = chain.invoke({
-                "query": original_query,
-                "documents_summary": docs_summary_for_prompt
-            })
-            summary = response.content.strip()
-            print(f"Contextualizador: Resumen textual generado: '{summary[:150]}...'")
-            # Para intención 'text' o 'code', no necesitamos visualización
-            return {"summary": summary, "needs_visualization": False, "data_for_python": None}
-        except Exception as e:
-            print(f"Error inesperado generando resumen textual: {e}")
-            return {"summary": "Error al intentar generar un resumen de la información encontrada.",
-                    "needs_visualization": False,
-                    "data_for_python": None}
-
-    elif intent == 'visual':
-        print("Contextualizador: Intención es 'visual'. Analizando viabilidad de visualización...")
-        chain = visual_analysis_template | llm
-        try:
-            response = chain.invoke({
-                "query": original_query,
-                "documents_summary": docs_summary_for_prompt
-            })
-            content = response.content
-
-            print(f"Contextualizador: Respuesta cruda del LLM (Análisis Visual):\n---\n{content}\n---")
-
-            # Extraer JSON (similar al moderador)
-            json_match = re.search(r"```json\s*(\{[\s\S]*?\})\s*```", content, re.DOTALL)
-            if json_match:
-                json_str = json_match.group(1).strip()
+        if is_simple_list_output and single_key:
+            items_list = [str(item.get(single_key, "N/A")) for item in pandasai_result]
+            items_str = ", ".join(items_list[:20]) # Mostrar hasta 20 elementos directamente
+            if num_rows == 1:
+                return f"El resultado es: {items_str}."
+            elif num_rows <= 20:
+                return f"Los resultados son: {items_str}."
             else:
-                json_match_loose = re.search(r"(\{[\s\S]*?\})", content, re.DOTALL)
-                json_str = json_match_loose.group(1).strip() if json_match_loose else content.strip()
+                return f"Se encontraron {num_rows} resultados. Los primeros son: {items_str} (...y {num_rows - 20} más)."
+        else:
+            # Para DataFrames más generales, solo indicar la cantidad y quizás las columnas
+            # o un preview muy corto. El frontend podría renderizar la tabla completa si es necesario.
+            # columns_str = ", ".join(columns)
+            preview_items = pandasai_result[:3] # Muestra las primeras 3 filas
+            try:
+                preview_str = json.dumps(preview_items, indent=2, ensure_ascii=False, default=str)
+            except Exception:
+                 preview_str = str(preview_items)
 
-            print(f"Contextualizador: JSON extraído (Análisis Visual):\n---\n{json_str}\n---")
+            return f"Se encontraron {num_rows} registros. A continuación una muestra:\n{preview_str}" \
+                   f"{f'\n(... y {num_rows - 3} filas más)' if num_rows > 3 else ''}"
 
-            analysis_result = json.loads(json_str)
-
-            # Validar respuesta del análisis
-            if not all(k in analysis_result for k in ["visualization_possible", "data_for_python", "explanation"]):
-                raise ValueError("Respuesta JSON del análisis de visualización incompleta.")
-
-            is_possible = analysis_result.get("visualization_possible", False)
-            data_output = analysis_result.get("data_for_python") # Puede ser string o null
-            explanation = analysis_result.get("explanation", "Análisis de visualización incompleto.")
-
-            if is_possible and data_output:
-                print("Contextualizador: Visualización considerada POSIBLE.")
-                # La explicación puede servir como texto acompañante inicial
-                return {
-                    "summary": explanation,
-                    "needs_visualization": True,
-                    "data_for_python": data_output # Pasa el string que representa la lista de dicts
-                }
-            else:
-                print("Contextualizador: Visualización considerada NO POSIBLE.")
-                # La explicación se convierte en la respuesta textual final
-                return {
-                    "summary": explanation,
-                    "needs_visualization": False,
-                    "data_for_python": None
-                }
-
-        except json.JSONDecodeError as e:
-            print(f"Error Crítico: Fallo al parsear JSON del análisis de visualización: {e}")
-            print(f"Respuesta LLM que causó el error:\n{content}")
-            return {"summary": "Error al analizar la viabilidad de la visualización solicitada.",
-                    "needs_visualization": False,
-                    "data_for_python": None}
-        except Exception as e:
-            print(f"Error Inesperado durante el análisis de visualización: {e}")
-            import traceback
-            traceback.print_exc()
-            return {"summary": "Error interno al procesar la solicitud de visualización.",
-                    "needs_visualization": False,
-                    "data_for_python": None}
+    elif pandasai_result_type == "string":
+        return f"{str(pandasai_result)}"
+    elif pandasai_result_type in ["int", "float", "number", "bool"]: # 'number' podría ser un tipo de PandasAI
+        return f"El resultado es: {str(pandasai_result)}."
+    elif isinstance(pandasai_result, list): # Lista genérica, no de dataframes
+        try:
+            # Limitar tamaño de listas grandes
+            res_str = json.dumps(pandasai_result[:20], ensure_ascii=False, default=str)
+            if len(pandasai_result) > 20 : res_str += "\n(... más elementos no mostrados)"
+            return f"Resultados: {res_str}"
+        except Exception:
+             return f"Resultados: {str(pandasai_result)[:1000]}"
+    elif isinstance(pandasai_result, dict): # Diccionario genérico
+        try:
+            res_str = json.dumps(pandasai_result, indent=2, ensure_ascii=False, default=str)
+            if len(res_str) > 1000: res_str = res_str[:1000] + "..."
+            return f"Resultado: {res_str}"
+        except Exception:
+            return f"Resultado: {str(pandasai_result)[:1000]}"
     else:
-        # Fallback si la intención no es reconocida (aunque el moderador debería validarla)
-        print(f"Advertencia (Contextualizador): Intención desconocida '{intent}'. Procediendo como texto.")
-        return contextualize(original_query, 'text', retrieved_docs)
+        logger.warning(f"Contextualizador: Tipo de resultado PandasAI no manejado explícitamente para summary: {pandasai_result_type}")
+        return f"Se obtuvo un resultado del análisis: {str(pandasai_result)[:500]}"
 
 
+def contextualize(state: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Prepara el 'summary' para el validador y el usuario final, basándose
+    directamente en los resultados de PandasAI (sin usar LLM aquí).
+    Pasa la ruta del plot si existe.
+    """
+    original_query = state.get('original_query', "Consulta no especificada") # Fallback
+    pandasai_result = state.get('pandasai_result')
+    pandasai_result_type = state.get('pandasai_result_type')
+    pandasai_plot_path = state.get('pandasai_plot_path')
+    pandasai_error = state.get('pandasai_error')
 
-# if __name__ == 'main':
-#     print("--- Probando Agente Contextualizador ---")
+    logger.info("Contextualizador (PandasAI-only - Flujo Simplificado): Iniciando...")
+    logger.debug(f"  Recibido del estado: ResultType='{pandasai_result_type}', PlotPath='{pandasai_plot_path}', Error='{pandasai_error}'")
 
-#     # Simular documentos recuperados (ejemplo muy simple)
-#     mock_docs = [
-#         Document(page_content="Llegó fragata A de New York en 10 días. Capitan Smith.", metadata={"ship_type": "fragata", "travel_duration": "10dias", "master_name": "Smith"}),
-#         Document(page_content="Vapor B llegó de La Habana en 5 días. Capitan Jones.", metadata={"ship_type": "vapor", "travel_duration": "5dias", "master_name": "Jones"}),
-#         Document(page_content="Fragata C tardó 12 días desde Liverpool. Capitan Smith.", metadata={"ship_type": "fragata", "travel_duration": "12dias", "master_name": "Smith"})
-#     ]
+    output_summary: Optional[str] = None
 
-#     # Prueba 1: Intención Textual
-#     # query1 = "¿Quién capitaneó la fragata C?"
-#     # intent1 = "text"
-#     # result1 = contextualize(query1, intent1, mock_docs)
-#     # print("\nResultado Prueba 1 (Textual):", json.dumps(result1, indent=2, ensure_ascii=False))
+    # Si hay un plot generado por PandasAI o un error, el validador los manejará.
+    # Aquí solo generamos un summary textual si NO hay plot Y NO hay error.
+    if not pandasai_plot_path and not pandasai_error:
+        logger.info("Contextualizador: No hay plot ni error de PandasAI, formateando resultado para summary.")
+        output_summary = format_pandasai_data_for_summary(
+            pandasai_result,
+            pandasai_result_type,
+            original_query
+        )
+        logger.info(f"Contextualizador: Summary formateado (sin LLM): '{str(output_summary)[:150]}...'")
+    elif pandasai_plot_path:
+        logger.info("Contextualizador: Se detectó ruta de plot. El validador la manejará.")
+        # Podemos poner un texto genérico que el validador usará si la imagen se procesa bien
+        output_summary = "Se ha generado una visualización para tu consulta."
+    elif pandasai_error:
+        logger.info("Contextualizador: Se detectó error de PandasAI. El validador lo manejará.")
+        # El summary puede reflejar el error para que el validador lo tenga
+        output_summary = f"Error al procesar la consulta con PandasAI: {pandasai_error}"
+    else:
+        # Caso de fallback si no hay plot, ni error, ni resultado claro
+        logger.warning("Contextualizador: No hay plot, ni error, ni resultado claro de PandasAI para formatear.")
+        output_summary = "No se pudo obtener una respuesta clara del análisis de datos."
 
-#     # Prueba 2: Intención Visual (Posible)
-#     # query2 = "Muéstrame la duración promedio por tipo de barco"
-#     # intent2 = "visual"
-#     # result2 = contextualize(query2, intent2, mock_docs)
-#     # print("\nResultado Prueba 2 (Visual Posible):", json.dumps(result2, indent=2, ensure_ascii=False))
 
-#     # Prueba 3: Intención Visual (No Posible)
-#     query3 = "Grafica la carga de los barcos por capitán"
-#     intent3 = "visual"
-#     result3 = contextualize(query3, intent3, mock_docs)
-#     print("\nResultado Prueba 3 (Visual No Posible):", json.dumps(result3, indent=2, ensure_ascii=False))
-    
+    # El estado devuelto solo necesita el summary.
+    # El Validador leerá pandasai_plot_path y pandasai_error directamente del estado global.
+    return {"summary": output_summary}
