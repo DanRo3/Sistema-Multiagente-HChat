@@ -1,4 +1,5 @@
 # 🚢📊 HChat: Un Sistema Multiagente IA 🌊
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/DanRo3/tesis-multiagente)
 **Proyecto de Tesis: Sistema Inteligente para Consultas en Lenguaje Natural y Visualización de Datos sobre Registros Marítimos Históricos mediante un Enfoque Multiagente y PandasAI.**
 
 ---
