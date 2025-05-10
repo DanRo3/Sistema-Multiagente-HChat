@@ -1,6 +1,19 @@
+<div align=center>
+
 # 🚢📊 HChat: Un Sistema Multiagente IA 🌊
+
+</div>
+
+<div align=center>
+
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/DanRo3/tesis-multiagente)
-**Proyecto de Tesis: Sistema Inteligente para Consultas en Lenguaje Natural y Visualización de Datos sobre Registros Marítimos Históricos mediante un Enfoque Multiagente y PandasAI.**
+
+</div>
+
+---
+**Proyecto de Tesis:**
+
+Sistema Inteligente para Consultas en Lenguaje Natural y Visualización de Datos sobre Registros Marítimos Históricos mediante un Enfoque Multiagente y PandasAI.
 
 ---
 
@@ -25,9 +38,14 @@ Construido como un microservicio utilizando FastAPI, el núcleo del sistema es u
 *   🚀 **API Robusta con FastAPI:** Expone la funcionalidad a través de un endpoint claro y eficiente.
 *   ⚙️ **Selección Dinámica de LLM:** Configurable para usar diferentes LLMs (OpenAI GPT, Google Gemini) como motor de razonamiento para los agentes y PandasAI.
 
-## 🏗️ Arquitectura del Sistema (Enfoque PandasAI)
+## 🏗️ Arquitectura del Sistema
 
 El sistema opera como un microservicio FastAPI, donde LangGraph orquesta el siguiente flujo de agentes:
+<div align=center>
+
+  ![Diagrama del sistema](./docs/images/mas-final.png)
+
+</div>
 
 1.  **Recepción (FastAPI):** El usuario (o un servicio intermediario como un backend Django) envía una consulta vía `POST` al endpoint `/api/query`.
 2.  **Agente Moderador:**
@@ -106,7 +124,7 @@ graph LR
 *   pip (gestor de paquetes de Python)
 *   Git
 
-### 1. Clonar el Repositorio (Si aplica)
+### 1. Clonar el Repositorio
 
 ```bash
 git clone <url-del-repositorio>
@@ -120,7 +138,7 @@ python -m venv env
 # En Windows:
 env\Scripts\activate
 # En Linux/macOS:
-# source env/bin/activate
+source env/bin/activate
 ```
 
 ### 3. Instalar Dependencias
@@ -161,6 +179,10 @@ CSV_FILE_PATH="data/DataLimpia.csv" # ¡Asegúrate que esta ruta sea correcta!
 
 ```bash
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8008
+```
+o
+```bash
+py runserver.py
 ```
 *   La API estará disponible en `http://localhost:8008`.
 *   La documentación interactiva (Swagger UI) estará en `http://localhost:8008/docs`.
@@ -226,4 +248,18 @@ Asegúrate de ajustar las consultas y la configuración dentro de ese script.
 Este es un proyecto de tesis. Las sugerencias para mejorar la robustez, eficiencia y capacidades son bienvenidas. Por favor, abre un *issue* para discutir cambios o mejoras.
 
 ---
-**Desarrollado como parte de un proyecto de tesis para optar por el título de Ingeniero en Ciencias Informáticas, por Daniel Rojas Grass en la Universidad de las Ciencias Informáticas (UCI).** 🎓
+<p align="center">
+  <strong>
+    Desarrollado como parte de un proyecto de tesis para optar por el título de Ingeniero en Ciencias Informáticas, por Daniel Rojas Grass en la Universidad de las Ciencias Informáticas (UCI). 🎓
+  </strong>
+</p>
+
+---
+
+<p align="center">
+  <strong>
+    DanRo 2025
+  </strong>
+</p>
+
+
