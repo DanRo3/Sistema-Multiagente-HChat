@@ -59,6 +59,9 @@ class Settings(BaseSettings):
     PANDASAI_ENABLE_CACHE: bool = Field(default=False, description="Habilitar caché de respuestas en PandasAI")
     PANDASAI_CHART_DIR_NAME: str = Field(default="pandasai_charts", description="Nombre del directorio donde PandasAI guarda los gráficos")
     PANDASAI_MAX_RETRIES: int = Field(default=3, description="Número máximo de reintentos de PandasAI para corregir código") # PandasAI puede reintentar
+    PANDASAI_TEMPERATURE:float = Field(default=0.0, description="Temperatura para generación de texto en PandasAI")
+    PANDASAI_SEED: int = Field(default=42, description="Seed para generación de texto en PandasAI")
+    PANDASAI_LANGUAGE: str = Field(default="es", description="Idioma para generación de texto en PandasAI")
 
     # --- Validadores (Opcional pero recomendado) ---
     @validator('GEMINI_API_KEY', 'OPENAI_API_KEY', pre=True, always=True)
