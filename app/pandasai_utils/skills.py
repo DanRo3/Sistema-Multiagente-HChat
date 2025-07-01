@@ -33,7 +33,7 @@ def get_tabular_data(
     df: pd.DataFrame,
     columns_to_select: Optional[List[str]] = None,
     filter_conditions: Optional[str] = None,
-    sort_by: Optional[List[Dict[str, str]]] = None, # Ej: [{"column": "col_name", "order": "asc"}]
+    sort_by: Optional[List[Dict[str, str]]] = None,
     limit: Optional[int] = None,
     query_description: Optional[str] = "Obtener datos tabulares"
 ) -> pd.DataFrame:
